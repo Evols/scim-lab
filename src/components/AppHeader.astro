@@ -1,0 +1,18 @@
+---
+interface Props {
+	today: string;
+}
+
+const { today } = Astro.props;
+---
+
+<header class="flex h-[72px] items-center justify-between border-b border-[#20231e]/20 md:h-[88px]">
+	<a class="inline-flex items-center gap-[11px] text-xl font-bold tracking-[-0.04em] text-[#20231e] no-underline outline-none focus-visible:ring-3 focus-visible:ring-[#2f5e39]/35 focus-visible:ring-offset-3" href="/" aria-label="Tempo home">
+		<span class="grid size-[30px] place-items-center rounded-full border border-[#20231e] text-base" aria-hidden="true">✓</span>
+		<span>tempo</span>
+	</a>
+	<div class="flex items-center gap-2.5 font-['DM_Mono'] text-[11px] tracking-[0.06em] text-[#64675f] uppercase">
+		<span class="size-[7px] rounded-full bg-[#4d8459] shadow-[0_0_0_4px_rgba(77,132,89,0.12)]" aria-hidden="true"></span>
+		{today}
+	</div>
+</header>

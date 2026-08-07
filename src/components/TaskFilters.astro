@@ -1,0 +1,26 @@
+---
+interface Props {
+	filter: 'all' | 'active' | 'done';
+	total_count: number;
+	active_count: number;
+	done_count: number;
+}
+
+const { filter, total_count, active_count, done_count } = Astro.props;
+const link_classes = "relative py-[22px] pb-[19px] font-['DM_Mono'] text-[11px] tracking-[0.04em] uppercase no-underline outline-none after:absolute after:inset-x-0 after:-bottom-px after:h-0.5 after:content-[''] focus-visible:ring-3 focus-visible:ring-[#2f5e39]/35 focus-visible:ring-offset-3";
+---
+
+<div class="flex min-h-[65px] items-center justify-between gap-5 border-b border-[#20231e]/10 px-[18px] md:px-6">
+	<nav class="flex items-center gap-[18px] md:gap-[26px]" aria-label="Filter tasks">
+		<a class:list={[link_classes, filter === 'all' ? 'text-[#20231e] after:bg-[#4d8459]' : 'text-[#83867e] after:bg-transparent']} href="/">All <span class="ml-1 text-[#afb1aa]">{total_count}</span></a>
+		<a class:list={[link_classes, filter === 'active' ? 'text-[#20231e] after:bg-[#4d8459]' : 'text-[#83867e] after:bg-transparent']} href="/?filter=active">Active <span class="ml-1 text-[#afb1aa]">{active_count}</span></a>
+		<a class:list={[link_classes, filter === 'done' ? 'text-[#20231e] after:bg-[#4d8459]' : 'text-[#83867e] after:bg-transparent']} href="/?filter=done">Done <span class="ml-1 text-[#afb1aa]">{done_count}</span></a>
+	</nav>
+	{done_count > 0 && (
+		<form method="POST">
+			<input type="hidden" name="intent" value="clear" />
+			<input type="hidden" name="filter" value={filter} />
+			<button class="cursor-pointer bg-transparent py-1.5 font-['DM_Mono'] text-[10px] tracking-[0.04em] text-[#8c8e87] uppercase outline-none transition-colors hover:text-[#a24a3e] focus-visible:ring-3 focus-visible:ring-[#2f5e39]/35 focus-visible:ring-offset-3" type="submit">Clear<span class="hidden md:inline"> completed</span></button>
+		</form>
+	)}
+</div>

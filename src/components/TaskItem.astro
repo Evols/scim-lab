@@ -1,0 +1,33 @@
+---
+import type { task_record } from '../db/schema';
+
+interface Props {
+	task: task_record;
+	filter: 'all' | 'active' | 'done';
+	is_first: boolean;
+}
+
+const { task, filter, is_first } = Astro.props;
+---
+
+<li class="group grid min-h-[82px] grid-cols-[auto_1fr_auto] items-center gap-[17px] border-b border-[#20231e]/10 px-[18px] py-[15px] transition-colors last:border-b-0 hover:bg-[#f4f1e8]/55 md:px-6">
+	<form method="POST">
+		<input type="hidden" name="intent" value="toggle" />
+		<input type="hidden" name="id" value={task.id} />
+		<input type="hidden" name="completed" value={String(!task.completed)} />
+		<input type="hidden" name="filter" value={filter} />
+		<button class:list={['grid size-6 cursor-pointer place-items-center rounded-full border-[1.5px] text-[13px] text-white outline-none transition duration-150 hover:scale-[1.08] hover:border-[#4d8459] focus-visible:ring-3 focus-visible:ring-[#2f5e39]/35 focus-visible:ring-offset-3', task.completed ? 'border-[#4d8459] bg-[#4d8459]' : 'border-[#9a9d95] bg-transparent']} type="submit" aria-label={task.completed ? `Mark ${task.title} active` : `Mark ${task.title} complete`} aria-pressed={task.completed}>
+			<span aria-hidden="true">{task.completed ? '✓' : ''}</span>
+		</button>
+	</form>
+	<div class="min-w-0">
+		<p class:list={['m-0 text-sm font-semibold tracking-[-0.01em] break-words', task.completed && 'text-[#a2a49e] line-through decoration-[#83867e]']}>{task.title}</p>
+		<span class="mt-1.5 block font-['DM_Mono'] text-[9px] tracking-[0.11em] text-[#9a9c95] uppercase">{task.completed ? 'Completed' : is_first && filter !== 'done' ? 'Up next' : 'Open'}</span>
+	</div>
+	<form method="POST">
+		<input type="hidden" name="intent" value="delete" />
+		<input type="hidden" name="id" value={task.id} />
+		<input type="hidden" name="filter" value={filter} />
+		<button class="cursor-pointer bg-transparent py-1.5 font-['DM_Mono'] text-[10px] tracking-[0.04em] text-[#8c8e87] uppercase opacity-100 outline-none transition hover:text-[#a24a3e] focus-visible:opacity-100 focus-visible:ring-3 focus-visible:ring-[#2f5e39]/35 focus-visible:ring-offset-3 md:opacity-0 md:group-hover:opacity-100" type="submit" aria-label={`Delete ${task.title}`}>Delete</button>
+	</form>
+</li>

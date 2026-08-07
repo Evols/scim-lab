@@ -1,0 +1,28 @@
+---
+interface Props {
+	filter: 'all' | 'active' | 'done';
+}
+
+const { filter } = Astro.props;
+const focus_classes = 'focus-visible:outline-3 focus-visible:outline-[#2f5e39]/35 focus-visible:outline-offset-3';
+---
+
+<form class="composer grid grid-cols-[auto_1fr] items-center gap-4 border-b border-[#20231e]/15 p-[15px_18px] md:grid-cols-[auto_1fr_auto] md:p-[18px_18px_18px_24px]" method="POST">
+	<input type="hidden" name="intent" value="create" />
+	<input type="hidden" name="filter" value={filter} />
+	<label class="sr-only" for="new-task">What needs to be done?</label>
+	<span class="text-[27px] leading-none text-[#4d8459]" aria-hidden="true">+</span>
+	<input class:list={['min-w-0 bg-transparent py-[13px] text-[17px] text-[#20231e] outline-none placeholder:text-[#92948d]', focus_classes]} id="new-task" name="title" type="text" maxlength="160" placeholder="What needs to be done?" autocomplete="off" required />
+	<button class:list={['col-span-full min-h-[45px] w-full cursor-pointer rounded-[9px] bg-[#2f5e39] px-[19px] text-[13px] font-semibold text-[#f8f7f1] transition duration-150 hover:-translate-y-px hover:bg-[#244c2d] disabled:cursor-wait disabled:opacity-70 md:col-span-1 md:w-auto', focus_classes]} type="submit">Add task <span aria-hidden="true">↗</span></button>
+</form>
+
+<script>
+	const composer_form = document.querySelector<HTMLFormElement>('.composer');
+	composer_form?.addEventListener('submit', () => {
+		const submit_button = composer_form.querySelector<HTMLButtonElement>('button[type="submit"]');
+		if (submit_button) {
+			submit_button.disabled = true;
+			submit_button.textContent = 'Adding…';
+		}
+	});
+</script>

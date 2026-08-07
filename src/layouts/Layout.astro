@@ -1,4 +1,6 @@
 ---
+import '../styles/global.css';
+
 interface Props {
 	title?: string;
 	description?: string;
@@ -11,7 +13,7 @@ const {
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang="en" class="min-h-full bg-[#f4f1e8]">
 	<head>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -21,10 +23,7 @@ const {
 		<link rel="icon" href="/favicon.ico" />
 		<link rel="preconnect" href="https://fonts.googleapis.com" />
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-		<link
-			href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap"
-			rel="stylesheet"
-		/>
+		<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
 		<meta name="generator" content={Astro.generator} />
 		<meta property="og:type" content="website" />
 		<meta property="og:title" content={title} />
@@ -34,47 +33,7 @@ const {
 		<meta name="twitter:image" content={new URL('/og.png', Astro.url.origin)} />
 		<title>{title}</title>
 	</head>
-	<body>
+	<body class="min-h-screen min-w-80 bg-[#f4f1e8] font-[Manrope] text-[#20231e] antialiased selection:bg-[#b8eabf] selection:text-[#162019]">
 		<slot />
 	</body>
 </html>
-
-<style is:global>
-	:root {
-		font-family: 'Manrope', sans-serif;
-		color: #20231e;
-		background: #f4f1e8;
-		font-synthesis: none;
-		text-rendering: optimizeLegibility;
-	}
-
-	* {
-		box-sizing: border-box;
-	}
-
-	html,
-	body {
-		margin: 0;
-		width: 100%;
-		min-height: 100%;
-	}
-
-	body {
-		min-width: 320px;
-	}
-
-	button,
-	input {
-		font: inherit;
-	}
-
-	button,
-	a {
-		-webkit-tap-highlight-color: transparent;
-	}
-
-	::selection {
-		color: #162019;
-		background: #b8eabf;
-	}
-</style>
