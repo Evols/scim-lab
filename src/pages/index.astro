@@ -1,17 +1,14 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import { createTask, clearCompletedTasks, deleteTask, listTasks, setTaskCompleted } from '../db';
+import { clear_completed_tasks, create_task, delete_task, list_tasks, set_task_completed } from '../db';
 
 export const prerender = false;
 
-type Filter = 'all' | 'active' | 'done';
+type task_filter = 'all' | 'active' | 'done';
 
-const safeRedirect = (filter: string | null) => {
-	const selected = filter === 'active' || filter === 'done' ? filter : 'all';
-	return selected === 'all' ? '/' : `/?filter=${selected}`;
-};
+async function handle_post(): Promise<Response | undefined> {
+	if (Astro.request.method !== 'POST') return;
 
-if (Astro.request.method === 'POST') {
 	const origin = Astro.request.headers.get('origin');
 	if (origin && origin !== Astro.url.origin) return new Response('Invalid request origin.', { status: 403 });
 
@@ -21,34 +18,39 @@ if (Astro.request.method === 'POST') {
 
 	if (intent === 'create') {
 		const title = String(form.get('title') ?? '').trim().replace(/\s+/g, ' ');
-		if (title) await createTask(title.slice(0, 160));
+		if (title) await create_task(title.slice(0, 160));
 	}
 
 	if (intent === 'toggle') {
 		const id = String(form.get('id') ?? '');
-		if (id) await setTaskCompleted(id, form.get('completed') === 'true');
+		if (id) await set_task_completed(id, form.get('completed') === 'true');
 	}
 
 	if (intent === 'delete') {
 		const id = String(form.get('id') ?? '');
-		if (id) await deleteTask(id);
+		if (id) await delete_task(id);
 	}
 
-	if (intent === 'clear') await clearCompletedTasks();
-	return Astro.redirect(safeRedirect(filter), 303);
+	if (intent === 'clear') await clear_completed_tasks();
+	const selected_filter = filter === 'active' || filter === 'done' ? filter : 'all';
+	const redirect_path = selected_filter === 'all' ? '/' : `/?filter=${selected_filter}`;
+	return Astro.redirect(redirect_path, 303);
 }
 
-const requestedFilter = Astro.url.searchParams.get('filter');
-const filter: Filter = requestedFilter === 'active' || requestedFilter === 'done' ? requestedFilter : 'all';
-const tasks = await listTasks();
-const activeCount = tasks.filter((task) => !task.completed).length;
-const doneCount = tasks.length - activeCount;
-const visibleTasks = tasks.filter((task) => {
+const post_response = await handle_post();
+if (post_response) return post_response;
+
+const requested_filter = Astro.url.searchParams.get('filter');
+const filter: task_filter = requested_filter === 'active' || requested_filter === 'done' ? requested_filter : 'all';
+const tasks = await list_tasks();
+const active_count = tasks.filter((task) => !task.completed).length;
+const done_count = tasks.length - active_count;
+const visible_tasks = tasks.filter((task) => {
 	if (filter === 'active') return !task.completed;
 	if (filter === 'done') return task.completed;
 	return true;
 });
-const progress = tasks.length === 0 ? 0 : Math.round((doneCount / tasks.length) * 100);
+const progress = tasks.length === 0 ? 0 : Math.round((done_count / tasks.length) * 100);
 const today = new Intl.DateTimeFormat('en', {
 	weekday: 'long',
 	month: 'short',
@@ -89,10 +91,10 @@ const today = new Intl.DateTimeFormat('en', {
 				<div class="filters-row">
 					<nav class="filters" aria-label="Filter tasks">
 						<a class:list={[{ active: filter === 'all' }]} href="/">All <span>{tasks.length}</span></a>
-						<a class:list={[{ active: filter === 'active' }]} href="/?filter=active">Active <span>{activeCount}</span></a>
-						<a class:list={[{ active: filter === 'done' }]} href="/?filter=done">Done <span>{doneCount}</span></a>
+						<a class:list={[{ active: filter === 'active' }]} href="/?filter=active">Active <span>{active_count}</span></a>
+						<a class:list={[{ active: filter === 'done' }]} href="/?filter=done">Done <span>{done_count}</span></a>
 					</nav>
-					{doneCount > 0 && (
+					{done_count > 0 && (
 						<form method="POST">
 							<input type="hidden" name="intent" value="clear" />
 							<input type="hidden" name="filter" value={filter} />
@@ -102,9 +104,9 @@ const today = new Intl.DateTimeFormat('en', {
 				</div>
 
 				<div class="list-region">
-					{visibleTasks.length > 0 ? (
+					{visible_tasks.length > 0 ? (
 						<ul class="task-list">
-							{visibleTasks.map((task, index) => (
+							{visible_tasks.map((task, index) => (
 								<li class:list={['task-item', { completed: task.completed }]}>
 									<form method="POST" class="toggle-form">
 										<input type="hidden" name="intent" value="toggle" />
@@ -141,10 +143,10 @@ const today = new Intl.DateTimeFormat('en', {
 			<section class="progress-card" aria-label={`${progress}% complete`}>
 				<div>
 					<span class="progress-label">DAY'S PROGRESS</span>
-					<strong>{doneCount}<span> / {tasks.length}</span></strong>
+					<strong>{done_count}<span> / {tasks.length}</span></strong>
 				</div>
 				<div class="progress-track" aria-hidden="true"><span style={`width: ${progress}%`}></span></div>
-				<p>{tasks.length === 0 ? 'Your slate is open.' : progress === 100 ? 'All wrapped up.' : `${activeCount} ${activeCount === 1 ? 'task' : 'tasks'} left.`}</p>
+				<p>{tasks.length === 0 ? 'Your slate is open.' : progress === 100 ? 'All wrapped up.' : `${active_count} ${active_count === 1 ? 'task' : 'tasks'} left.`}</p>
 			</section>
 		</main>
 

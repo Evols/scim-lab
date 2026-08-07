@@ -3,36 +3,36 @@ import { asc, desc, eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
 import { tasks } from './schema';
 
-function getDb() {
+function get_db() {
 	const binding = (env as unknown as { DB?: D1Database }).DB;
 	if (!binding) throw new Error('Cloudflare D1 binding `DB` is unavailable.');
 	return drizzle(binding, { schema: { tasks } });
 }
 
-export function listTasks() {
-	return getDb().select().from(tasks).orderBy(asc(tasks.completed), desc(tasks.createdAt));
+export function list_tasks() {
+	return get_db().select().from(tasks).orderBy(asc(tasks.completed), desc(tasks.created_at));
 }
 
-export function createTask(title: string) {
-	return getDb().insert(tasks).values({
+export function create_task(title: string) {
+	return get_db().insert(tasks).values({
 		id: crypto.randomUUID(),
 		title,
 		completed: false,
-		createdAt: new Date(),
+		created_at: new Date(),
 	});
 }
 
-export function setTaskCompleted(id: string, completed: boolean) {
-	return getDb()
+export function set_task_completed(id: string, completed: boolean) {
+	return get_db()
 		.update(tasks)
-		.set({ completed, completedAt: completed ? new Date() : null })
+		.set({ completed, completed_at: completed ? new Date() : null })
 		.where(eq(tasks.id, id));
 }
 
-export function deleteTask(id: string) {
-	return getDb().delete(tasks).where(eq(tasks.id, id));
+export function delete_task(id: string) {
+	return get_db().delete(tasks).where(eq(tasks.id, id));
 }
 
-export function clearCompletedTasks() {
-	return getDb().delete(tasks).where(eq(tasks.completed, true));
+export function clear_completed_tasks() {
+	return get_db().delete(tasks).where(eq(tasks.completed, true));
 }

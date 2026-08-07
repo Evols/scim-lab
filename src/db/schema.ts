@@ -6,10 +6,10 @@ export const tasks = sqliteTable(
 		id: text('id').primaryKey(),
 		title: text('title').notNull(),
 		completed: integer('completed', { mode: 'boolean' }).notNull().default(false),
-		createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
-		completedAt: integer('completed_at', { mode: 'timestamp_ms' }),
+		created_at: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+		completed_at: integer('completed_at', { mode: 'timestamp_ms' }),
 	},
-	(table) => [index('idx_tasks_completed_created_at').on(table.completed, table.createdAt)],
+	(table) => [index('idx_tasks_completed_created_at').on(table.completed, table.created_at)],
 );
 
-export type Task = typeof tasks.$inferSelect;
+export type task_record = typeof tasks.$inferSelect;
