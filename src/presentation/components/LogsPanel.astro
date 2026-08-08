@@ -1,5 +1,6 @@
 ---
 import type { scim_event_record } from '../../db/schema.ts';
+import JsonPayloadViewer from './JsonPayloadViewer.astro';
 
 interface Props { events: scim_event_record[]; server_id: string; status_filter: string; method_filter: string }
 const { events, server_id, status_filter, method_filter } = Astro.props;
@@ -13,6 +14,28 @@ const status_classes = (status: number) => status < 300 ? 'border-[#bbf7d0] bg-[
 	</div>
 
 	<section class="mt-6 overflow-hidden rounded-lg border border-[#e4e4e7] bg-white shadow-xs">
-		{events.length ? <div class="divide-y divide-[#e4e4e7]">{events.map((event) => <details class="group"><summary class="grid cursor-pointer list-none grid-cols-[54px_1fr_auto] items-center gap-3 px-4 py-3 hover:bg-[#fafafa] md:grid-cols-[64px_1fr_60px_110px_70px]"><span class="font-mono text-xs font-medium text-[#3f3f46]">{event.method}</span><code class="min-w-0 truncate font-mono text-xs text-[#52525b]">{event.path}</code><span class:list={['inline-flex justify-center rounded-full border px-2 py-0.5 font-mono text-[11px] font-medium', status_classes(event.status)]}>{event.status}</span><time class="hidden text-xs text-[#71717a] md:block">{event.created_at.toLocaleString('en', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</time><span class="hidden text-right font-mono text-[11px] text-[#a1a1aa] md:block">{event.duration_ms} ms</span></summary><div class="border-t border-[#e4e4e7] bg-[#fafafa] p-4"><div class="grid gap-4 lg:grid-cols-2"><div><p class="mb-2 text-xs font-medium text-[#71717a]">Request {event.request_truncated ? '· truncated' : ''}</p><pre class="max-h-80 overflow-auto whitespace-pre-wrap rounded-md border border-[#27272a] bg-[#18181b] p-4 font-mono text-[11px] leading-6 text-[#d4d4d8]">{event.request_body ?? 'No request body'}</pre></div><div><p class="mb-2 text-xs font-medium text-[#71717a]">Response {event.response_truncated ? '· truncated' : ''}</p><pre class="max-h-80 overflow-auto whitespace-pre-wrap rounded-md border border-[#27272a] bg-[#18181b] p-4 font-mono text-[11px] leading-6 text-[#d4d4d8]">{event.response_body ?? 'No response body'}</pre></div></div></div></details>)}</div> : <div class="grid min-h-72 place-items-center px-6 py-12 text-center"><div><span class="mx-auto grid size-10 place-items-center rounded-md border border-[#e4e4e7] bg-[#fafafa] font-mono text-xs text-[#71717a]">200</span><h2 class="mt-4 text-sm font-semibold">Waiting for requests</h2><p class="mt-1.5 max-w-sm text-sm leading-6 text-[#71717a]">Authenticated and rejected SCIM traffic will appear here with sanitized payloads.</p></div></div>}
+		{events.length ? <div class="divide-y divide-[#e4e4e7]">{events.map((event) => (
+			<details class="group">
+				<summary class="grid cursor-pointer list-none grid-cols-[18px_54px_1fr_auto] items-center gap-3 px-4 py-3 transition hover:bg-[#fafafa] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#a1a1aa] md:grid-cols-[18px_64px_1fr_60px_110px_70px]">
+					<span class="text-lg leading-none text-[#a1a1aa] transition-transform group-open:rotate-90" aria-hidden="true">›</span>
+					<span class="font-mono text-xs font-semibold text-[#3f3f46]">{event.method}</span>
+					<code class="min-w-0 truncate font-mono text-xs text-[#52525b]">{event.path}</code>
+					<span class:list={['inline-flex justify-center rounded-full border px-2 py-0.5 font-mono text-[11px] font-medium', status_classes(event.status)]}>{event.status}</span>
+					<time class="hidden text-xs text-[#71717a] md:block">{event.created_at.toLocaleString('en', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</time>
+					<span class="hidden text-right font-mono text-[11px] text-[#a1a1aa] md:block">{event.duration_ms} ms</span>
+				</summary>
+				<div class="border-t border-[#e4e4e7] bg-[#f4f4f5] p-3 sm:p-4">
+					<div class="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 px-1 text-[11px] text-[#71717a]">
+						<span>Authentication <strong class:list={['font-medium', event.auth_success ? 'text-[#15803d]' : 'text-[#b91c1c]']}>{event.auth_success ? 'accepted' : 'rejected'}</strong></span>
+						{event.auth_mode && <span>Mode <strong class="font-mono font-medium uppercase text-[#3f3f46]">{event.auth_mode}</strong></span>}
+						<span class="ml-auto hidden sm:inline">Payloads are sanitized before storage</span>
+					</div>
+					<div class="grid items-start gap-3 xl:grid-cols-2">
+						<JsonPayloadViewer label="Request payload" body={event.request_body} tone="request" truncated={event.request_truncated} />
+						<JsonPayloadViewer label="Response payload" body={event.response_body} tone="response" truncated={event.response_truncated} />
+					</div>
+				</div>
+			</details>
+		))}</div> : <div class="grid min-h-72 place-items-center px-6 py-12 text-center"><div><span class="mx-auto grid size-10 place-items-center rounded-md border border-[#e4e4e7] bg-[#fafafa] font-mono text-xs text-[#71717a]">200</span><h2 class="mt-4 text-sm font-semibold">Waiting for requests</h2><p class="mt-1.5 max-w-sm text-sm leading-6 text-[#71717a]">Authenticated and rejected SCIM traffic will appear here with sanitized payloads.</p></div></div>}
 	</section>
 </div>
