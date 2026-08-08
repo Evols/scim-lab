@@ -1,8 +1,8 @@
 import { and, asc, count, eq, sql } from "drizzle-orm";
 import { db } from "../../../db";
 import { scim_users } from "../../../db/schema.ts";
-import { matches_filter } from "../filter.ts";
-import { paginate, type ListQuery } from "../pagination.ts";
+import { matches_filter } from "./filter.ts";
+import { paginate, type ListQuery } from "./pagination.ts";
 import type {
   PatchOperation,
   UserListResponse,

@@ -1,16 +1,16 @@
 import type { ScimServerRecord } from "../../../db/schema.ts";
-import { paginate } from "../pagination.ts";
+import { paginate } from "../server/pagination.ts";
 import {
   resource_types,
   schema_documents,
   service_provider_config,
 } from "../server/discovery.ts";
 import {
-  resource_type_list_schema,
-  resource_type_schema,
-  schema_document_list_schema,
-  schema_document_schema,
-  service_provider_config_schema,
+  ResourceTypeListSchema,
+  ResourceType,
+  SchemaDocumentListSchema,
+  SchemaDocument,
+  ServiceProviderConfigSchema,
 } from "../schemas.ts";
 import { scim_error } from "./error.ts";
 import { json_response } from "./response.ts";
@@ -24,7 +24,7 @@ export function discovery_response(
   if (resource === "ServiceProviderConfig")
     return json_response(
       service_provider_config(server),
-      service_provider_config_schema,
+      ServiceProviderConfigSchema,
     );
   if (resource === "Schemas") {
     const match = resource_id
@@ -34,11 +34,11 @@ export function discovery_response(
       : null;
     return resource_id
       ? match
-        ? json_response(match, schema_document_schema)
+        ? json_response(match, SchemaDocument)
         : scim_error(404, "Schema not found.")
       : json_response(
           paginate(schema_documents, url),
-          schema_document_list_schema,
+          SchemaDocumentListSchema,
         );
   }
   if (resource === "ResourceTypes") {
@@ -47,9 +47,9 @@ export function discovery_response(
       : null;
     return resource_id
       ? match
-        ? json_response(match, resource_type_schema)
+        ? json_response(match, ResourceType)
         : scim_error(404, "Resource type not found.")
-      : json_response(paginate(resource_types, url), resource_type_list_schema);
+      : json_response(paginate(resource_types, url), ResourceTypeListSchema);
   }
   return scim_error(404, "SCIM resource not found.");
 }

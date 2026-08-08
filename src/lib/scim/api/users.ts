@@ -9,10 +9,10 @@ import {
 } from "../server/users.ts";
 import { base_url } from "../server/resources.ts";
 import {
-  patch_request_schema,
-  user_list_response_schema,
-  user_resource_schema,
-  user_write_schema,
+  PatchRequestSchema,
+  UserListResponseSchema,
+  UserResourceSchema,
+  UserWriteSchema,
 } from "../schemas.ts";
 import { validate_json_body } from "./body.ts";
 import { scim_error } from "./error.ts";
@@ -30,7 +30,7 @@ async function route_users(
   if (method === "GET" && resource_id)
     return json_response(
       await get_user(server.id, resource_id, origin),
-      user_resource_schema,
+      UserResourceSchema,
     );
 
   if (method === "GET") {
@@ -39,14 +39,14 @@ async function route_users(
       start_index: url.searchParams.get("startIndex"),
       count: url.searchParams.get("count"),
     });
-    return json_response(result, user_list_response_schema);
+    return json_response(result, UserListResponseSchema);
   }
 
   if (method === "POST" && resource_id === undefined) {
-    const validation = validate_json_body(body, user_write_schema);
+    const validation = validate_json_body(body, UserWriteSchema);
     if (!validation.success) return validation.response;
     const resource = await create_user(server.id, validation.data, origin);
-    return json_response(resource, user_resource_schema, 201, {
+    return json_response(resource, UserResourceSchema, 201, {
       location: `${base_url(origin, server.id)}/Users/${resource.id}`,
     });
   }
@@ -61,15 +61,15 @@ async function route_users(
   }
 
   if (method === "PUT") {
-    const validation = validate_json_body(body, user_write_schema);
+    const validation = validate_json_body(body, UserWriteSchema);
     if (!validation.success) return validation.response;
     return json_response(
       await replace_user(server.id, resource_id, validation.data, origin),
-      user_resource_schema,
+      UserResourceSchema,
     );
   }
   if (method === "PATCH") {
-    const validation = validate_json_body(body, patch_request_schema);
+    const validation = validate_json_body(body, PatchRequestSchema);
     if (!validation.success) return validation.response;
     return json_response(
       await patch_user(
@@ -78,7 +78,7 @@ async function route_users(
         validation.data.Operations,
         origin,
       ),
-      user_resource_schema,
+      UserResourceSchema,
     );
   }
 

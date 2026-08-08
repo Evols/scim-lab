@@ -9,10 +9,10 @@ import {
 } from "../server/groups.ts";
 import { base_url } from "../server/resources.ts";
 import {
-  group_list_response_schema,
-  group_resource_schema,
-  group_write_schema,
-  patch_request_schema,
+  GroupListResponseSchema,
+  GroupResourceSchema,
+  GroupWriteSchema,
+  PatchRequestSchema,
 } from "../schemas.ts";
 import { validate_json_body } from "./body.ts";
 import { scim_error } from "./error.ts";
@@ -30,7 +30,7 @@ async function route_groups(
   if (method === "GET" && resource_id)
     return json_response(
       await get_group(server.id, resource_id, origin),
-      group_resource_schema,
+      GroupResourceSchema,
     );
 
   if (method === "GET") {
@@ -39,14 +39,14 @@ async function route_groups(
       start_index: url.searchParams.get("startIndex"),
       count: url.searchParams.get("count"),
     });
-    return json_response(result, group_list_response_schema);
+    return json_response(result, GroupListResponseSchema);
   }
 
   if (method === "POST" && !resource_id) {
-    const validation = validate_json_body(body, group_write_schema);
+    const validation = validate_json_body(body, GroupWriteSchema);
     if (!validation.success) return validation.response;
     const resource = await create_group(server.id, validation.data, origin);
-    return json_response(resource, group_resource_schema, 201, {
+    return json_response(resource, GroupResourceSchema, 201, {
       location: `${base_url(origin, server.id)}/Groups/${resource.id}`,
     });
   }
@@ -58,15 +58,15 @@ async function route_groups(
     return new Response(null, { status: 204 });
   }
   if (method === "PUT") {
-    const validation = validate_json_body(body, group_write_schema);
+    const validation = validate_json_body(body, GroupWriteSchema);
     if (!validation.success) return validation.response;
     return json_response(
       await replace_group(server.id, resource_id, validation.data, origin),
-      group_resource_schema,
+      GroupResourceSchema,
     );
   }
   if (method === "PATCH") {
-    const validation = validate_json_body(body, patch_request_schema);
+    const validation = validate_json_body(body, PatchRequestSchema);
     if (!validation.success) return validation.response;
     return json_response(
       await patch_group(
@@ -75,7 +75,7 @@ async function route_groups(
         validation.data.Operations,
         origin,
       ),
-      group_resource_schema,
+      GroupResourceSchema,
     );
   }
 

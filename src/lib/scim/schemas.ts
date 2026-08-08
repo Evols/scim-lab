@@ -1,114 +1,114 @@
 import * as z from "zod";
-import { GROUP_SCHEMA, LIST_SCHEMA, USER_SCHEMA } from "./constants.ts";
+import { GROUP_SCHEMA, LIST_SCHEMA, USER_SCHEMA } from "./server/constants.ts";
 
-const nullable_string = z.string().nullable();
-const nullable_boolean = z.boolean().nullable();
+const NullableString = z.string().nullable();
+const NullableBoolean = z.boolean().nullable();
 
-const name_schema = z.looseObject({
-  formatted: nullable_string.optional(),
-  familyName: nullable_string.optional(),
-  givenName: nullable_string.optional(),
-  middleName: nullable_string.optional(),
-  honorificPrefix: nullable_string.optional(),
-  honorificSuffix: nullable_string.optional(),
+const NameSchema = z.looseObject({
+  formatted: NullableString.optional(),
+  familyName: NullableString.optional(),
+  givenName: NullableString.optional(),
+  middleName: NullableString.optional(),
+  honorificPrefix: NullableString.optional(),
+  honorificSuffix: NullableString.optional(),
 });
 
-const multi_valued_attribute_schema = z.looseObject({
-  value: nullable_string.optional(),
-  display: nullable_string.optional(),
-  type: nullable_string.optional(),
-  primary: nullable_boolean.optional(),
-  $ref: nullable_string.optional(),
+const MultiValuedAttributeSchema = z.looseObject({
+  value: NullableString.optional(),
+  display: NullableString.optional(),
+  type: NullableString.optional(),
+  primary: NullableBoolean.optional(),
+  $ref: NullableString.optional(),
 });
 
-const address_schema = z.looseObject({
-  formatted: nullable_string.optional(),
-  streetAddress: nullable_string.optional(),
-  locality: nullable_string.optional(),
-  region: nullable_string.optional(),
-  postalCode: nullable_string.optional(),
-  country: nullable_string.optional(),
-  type: nullable_string.optional(),
-  primary: nullable_boolean.optional(),
+const AddressSchema = z.looseObject({
+  formatted: NullableString.optional(),
+  streetAddress: NullableString.optional(),
+  locality: NullableString.optional(),
+  region: NullableString.optional(),
+  postalCode: NullableString.optional(),
+  country: NullableString.optional(),
+  type: NullableString.optional(),
+  primary: NullableBoolean.optional(),
 });
 
 const user_data_attributes = {
-  name: name_schema.nullable().optional(),
-  nickName: nullable_string.optional(),
-  profileUrl: nullable_string.optional(),
-  title: nullable_string.optional(),
-  userType: nullable_string.optional(),
-  preferredLanguage: nullable_string.optional(),
-  locale: nullable_string.optional(),
-  timezone: nullable_string.optional(),
-  emails: z.array(multi_valued_attribute_schema).nullable().optional(),
-  phoneNumbers: z.array(multi_valued_attribute_schema).nullable().optional(),
-  ims: z.array(multi_valued_attribute_schema).nullable().optional(),
-  photos: z.array(multi_valued_attribute_schema).nullable().optional(),
-  addresses: z.array(address_schema).nullable().optional(),
-  entitlements: z.array(multi_valued_attribute_schema).nullable().optional(),
-  roles: z.array(multi_valued_attribute_schema).nullable().optional(),
+  name: NameSchema.nullable().optional(),
+  nickName: NullableString.optional(),
+  profileUrl: NullableString.optional(),
+  title: NullableString.optional(),
+  userType: NullableString.optional(),
+  preferredLanguage: NullableString.optional(),
+  locale: NullableString.optional(),
+  timezone: NullableString.optional(),
+  emails: z.array(MultiValuedAttributeSchema).nullable().optional(),
+  phoneNumbers: z.array(MultiValuedAttributeSchema).nullable().optional(),
+  ims: z.array(MultiValuedAttributeSchema).nullable().optional(),
+  photos: z.array(MultiValuedAttributeSchema).nullable().optional(),
+  addresses: z.array(AddressSchema).nullable().optional(),
+  entitlements: z.array(MultiValuedAttributeSchema).nullable().optional(),
+  roles: z.array(MultiValuedAttributeSchema).nullable().optional(),
   x509Certificates: z
-    .array(multi_valued_attribute_schema)
+    .array(MultiValuedAttributeSchema)
     .nullable()
     .optional(),
 };
 
 const user_attributes = {
   schemas: z.array(z.string()).nullable().optional(),
-  externalId: nullable_string.optional(),
-  userName: nullable_string.optional(),
-  displayName: nullable_string.optional(),
-  active: nullable_boolean.optional(),
-  password: nullable_string.optional(),
+  externalId: NullableString.optional(),
+  userName: NullableString.optional(),
+  displayName: NullableString.optional(),
+  active: NullableBoolean.optional(),
+  password: NullableString.optional(),
   ...user_data_attributes,
 };
 
 // Database JSON holds only the flexible attributes, never identity or metadata.
-export const user_data_schema = z.object(user_data_attributes);
-export type UserData = z.infer<typeof user_data_schema>;
+export const UserDataSchema = z.object(user_data_attributes);
+export type UserData = z.infer<typeof UserDataSchema>;
 
 // Loose objects preserve extension URNs and vendor attributes. The known core
 // attributes still receive runtime validation and useful inferred types.
-export const user_write_schema = z.looseObject(user_attributes);
-export type UserWriteInput = z.infer<typeof user_write_schema>;
+export const UserWriteSchema = z.looseObject(user_attributes);
+export type UserWriteInput = z.infer<typeof UserWriteSchema>;
 
-export const group_member_schema = z.looseObject({
+export const GroupMemberSchema = z.looseObject({
   value: z.string(),
-  display: nullable_string.optional(),
-  $ref: nullable_string.optional(),
-  type: nullable_string.optional(),
+  display: NullableString.optional(),
+  $ref: NullableString.optional(),
+  type: NullableString.optional(),
 });
-export type GroupMember = z.infer<typeof group_member_schema>;
+export type GroupMember = z.infer<typeof GroupMemberSchema>;
 
-export const group_write_schema = z.looseObject({
+export const GroupWriteSchema = z.looseObject({
   schemas: z.array(z.string()).nullable().optional(),
-  externalId: nullable_string.optional(),
-  displayName: nullable_string.optional(),
-  members: z.array(group_member_schema).nullable().optional(),
+  externalId: NullableString.optional(),
+  displayName: NullableString.optional(),
+  members: z.array(GroupMemberSchema).nullable().optional(),
 });
-export type GroupWriteInput = z.infer<typeof group_write_schema>;
+export type GroupWriteInput = z.infer<typeof GroupWriteSchema>;
 
-export const patch_operation_schema = z.looseObject({
+export const PatchOperationSchema = z.looseObject({
   op: z.string(),
-  path: nullable_string.optional(),
+  path: NullableString.optional(),
   value: z.unknown().optional(),
 });
-export type PatchOperation = z.infer<typeof patch_operation_schema>;
+export type PatchOperation = z.infer<typeof PatchOperationSchema>;
 
-export const patch_request_schema = z.looseObject({
+export const PatchRequestSchema = z.looseObject({
   schemas: z.array(z.string()).nullable().optional(),
-  Operations: z.array(patch_operation_schema),
+  Operations: z.array(PatchOperationSchema),
 });
-export type PatchRequest = z.infer<typeof patch_request_schema>;
+export type PatchRequest = z.infer<typeof PatchRequestSchema>;
 
-const resource_reference_schema = z.looseObject({
+const ResourceReferenceSchema = z.looseObject({
   value: z.string(),
   display: z.string().optional(),
   $ref: z.string().optional(),
 });
 
-const resource_meta_schema = z.object({
+const ResourceMetaSchema = z.object({
   resourceType: z.string(),
   created: z.string(),
   lastModified: z.string(),
@@ -116,64 +116,64 @@ const resource_meta_schema = z.object({
   location: z.string(),
 });
 
-export const user_resource_schema = z.looseObject({
+export const UserResourceSchema = z.looseObject({
   ...user_attributes,
   schemas: z.tuple([z.literal(USER_SCHEMA)]),
   id: z.string(),
   userName: z.string(),
   displayName: z.string().optional(),
   active: z.boolean(),
-  groups: z.array(resource_reference_schema),
-  meta: resource_meta_schema.extend({ resourceType: z.literal("User") }),
+  groups: z.array(ResourceReferenceSchema),
+  meta: ResourceMetaSchema.extend({ resourceType: z.literal("User") }),
 });
-export type UserResource = z.infer<typeof user_resource_schema>;
+export type UserResource = z.infer<typeof UserResourceSchema>;
 
-export const group_resource_schema = z.looseObject({
+export const GroupResourceSchema = z.looseObject({
   schemas: z.tuple([z.literal(GROUP_SCHEMA)]),
   id: z.string(),
   externalId: z.string().optional(),
   displayName: z.string(),
-  members: z.array(resource_reference_schema),
-  meta: resource_meta_schema.extend({ resourceType: z.literal("Group") }),
+  members: z.array(ResourceReferenceSchema),
+  meta: ResourceMetaSchema.extend({ resourceType: z.literal("Group") }),
 });
-export type GroupResource = z.infer<typeof group_resource_schema>;
+export type GroupResource = z.infer<typeof GroupResourceSchema>;
 export type ScimResource = UserResource | GroupResource;
 
-export function list_response_schema<S extends z.ZodType>(resource_schema: S) {
+export function ListResponseSchema<S extends z.ZodType>(resourceSchema: S) {
   return z.object({
     schemas: z.tuple([z.literal(LIST_SCHEMA)]),
     totalResults: z.number().int().nonnegative(),
     startIndex: z.number().int().positive(),
     itemsPerPage: z.number().int().nonnegative(),
-    Resources: z.array(resource_schema),
+    Resources: z.array(resourceSchema),
   });
 }
 
-export const user_list_response_schema =
-  list_response_schema(user_resource_schema);
-export type UserListResponse = z.infer<typeof user_list_response_schema>;
-export const group_list_response_schema = list_response_schema(
-  group_resource_schema,
+export const UserListResponseSchema =
+  ListResponseSchema(UserResourceSchema);
+export type UserListResponse = z.infer<typeof UserListResponseSchema>;
+export const GroupListResponseSchema = ListResponseSchema(
+  GroupResourceSchema,
 );
-export type GroupListResponse = z.infer<typeof group_list_response_schema>;
+export type GroupListResponse = z.infer<typeof GroupListResponseSchema>;
 
-export const scim_error_schema = z.object({
+export const ScimErrorSchema = z.object({
   schemas: z.tuple([z.literal("urn:ietf:params:scim:api:messages:2.0:Error")]),
   status: z.string(),
   scimType: z.string().optional(),
   detail: z.string(),
 });
 
-const supported_schema = z.looseObject({ supported: z.boolean() });
-export const service_provider_config_schema = z.looseObject({
+const SupportedSchema = z.looseObject({ supported: z.boolean() });
+export const ServiceProviderConfigSchema = z.looseObject({
   schemas: z.array(z.string()),
   documentationUri: z.string(),
-  patch: supported_schema,
-  bulk: supported_schema,
-  filter: supported_schema,
-  changePassword: supported_schema,
-  sort: supported_schema,
-  etag: supported_schema,
+  patch: SupportedSchema,
+  bulk: SupportedSchema,
+  filter: SupportedSchema,
+  changePassword: SupportedSchema,
+  sort: SupportedSchema,
+  etag: SupportedSchema,
   authenticationSchemes: z.array(
     z.looseObject({
       type: z.string(),
@@ -185,28 +185,28 @@ export const service_provider_config_schema = z.looseObject({
   ),
 });
 export type ServiceProviderConfig = z.infer<
-  typeof service_provider_config_schema
+  typeof ServiceProviderConfigSchema
 >;
 
-export const schema_document_schema = z.looseObject({
+export const SchemaDocument = z.looseObject({
   schemas: z.array(z.string()),
   id: z.string(),
   name: z.string(),
   description: z.string(),
   attributes: z.array(z.looseObject({ name: z.string(), type: z.string() })),
 });
-export type SchemaDocument = z.infer<typeof schema_document_schema>;
-export const schema_document_list_schema = list_response_schema(
-  schema_document_schema,
+export type SchemaDocument = z.infer<typeof SchemaDocument>;
+export const SchemaDocumentListSchema = ListResponseSchema(
+  SchemaDocument,
 );
 
-export const resource_type_schema = z.looseObject({
+export const ResourceType = z.looseObject({
   schemas: z.array(z.string()),
   id: z.string(),
   name: z.string(),
   endpoint: z.string(),
   schema: z.string(),
 });
-export type ResourceType = z.infer<typeof resource_type_schema>;
-export const resource_type_list_schema =
-  list_response_schema(resource_type_schema);
+export type ResourceType = z.infer<typeof ResourceType>;
+export const ResourceTypeListSchema =
+  ListResponseSchema(ResourceType);

@@ -7,11 +7,11 @@ import {
   type ScimGroupRecord,
   type ScimUserRecord,
 } from "../../../db/schema.ts";
-import { GROUP_SCHEMA, USER_SCHEMA } from "../constants.ts";
+import { GROUP_SCHEMA, USER_SCHEMA } from "./constants.ts";
 import {
-  group_resource_schema,
-  user_data_schema,
-  user_resource_schema,
+  GroupResourceSchema,
+  UserDataSchema,
+  UserResourceSchema,
   type GroupResource,
   type UserData,
   type UserResource,
@@ -31,7 +31,7 @@ export function clean_user_payload(
 ): UserData {
   // Identity fields live in dedicated columns. Keep only extensible SCIM fields
   // in `data` so clients cannot persist computed `groups` or `meta` values.
-  return user_data_schema.parse(input);
+  return UserDataSchema.parse(input);
 }
 
 export async function user_resource(
@@ -43,14 +43,14 @@ export async function user_resource(
     .from(scim_group_members)
     .innerJoin(scim_groups, eq(scim_group_members.group_id, scim_groups.id))
     .where(eq(scim_group_members.user_id, row.id));
-  return user_resource_schema.parse({
+  return UserResourceSchema.parse({
     schemas: [USER_SCHEMA],
     id: row.id,
     ...(row.external_id ? { externalId: row.external_id } : {}),
     userName: row.user_name,
     ...(row.display_name ? { displayName: row.display_name } : {}),
     active: row.active,
-    ...user_data_schema.parse(row.data),
+    ...UserDataSchema.parse(row.data),
     groups: membership_rows.map(({ group }) => ({
       value: group.id,
       display: group.display_name,
@@ -76,7 +76,7 @@ export async function group_resource(
     .innerJoin(scim_users, eq(scim_group_members.user_id, scim_users.id))
     .where(eq(scim_group_members.group_id, row.id));
 
-  return group_resource_schema.parse({
+  return GroupResourceSchema.parse({
     schemas: [GROUP_SCHEMA],
     id: row.id,
     ...(row.external_id ? { externalId: row.external_id } : {}),

@@ -1,18 +1,16 @@
 import type { ScimServerRecord } from "../../../db/schema.ts";
-import { GROUP_SCHEMA, USER_SCHEMA } from "../constants.ts";
+import { GROUP_SCHEMA, USER_SCHEMA } from "./constants.ts";
 import {
-  resource_type_schema,
-  schema_document_schema,
-  service_provider_config_schema,
-  type ResourceType,
-  type SchemaDocument,
+  ResourceType,
+  SchemaDocument,
+  ServiceProviderConfigSchema,
   type ServiceProviderConfig,
 } from "../schemas.ts";
 
 export function service_provider_config(
   server: ScimServerRecord,
 ): ServiceProviderConfig {
-  return service_provider_config_schema.parse({
+  return ServiceProviderConfigSchema.parse({
     schemas: ["urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig"],
     documentationUri: "https://www.rfc-editor.org/rfc/rfc7644",
     patch: { supported: true },
@@ -42,7 +40,7 @@ export function service_provider_config(
 }
 
 // These documents describe the subset of core SCIM attributes this lab accepts.
-export const schema_documents: SchemaDocument[] = schema_document_schema
+export const schema_documents = SchemaDocument
   .array()
   .parse([
     {
@@ -188,7 +186,7 @@ export const schema_documents: SchemaDocument[] = schema_document_schema
     },
   ]);
 
-export const resource_types: ResourceType[] = resource_type_schema
+export const resource_types = ResourceType
   .array()
   .parse([
     {

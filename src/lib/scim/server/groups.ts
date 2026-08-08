@@ -5,10 +5,10 @@ import {
   scim_groups,
   scim_users,
 } from "../../../db/schema.ts";
-import { matches_filter } from "../filter.ts";
-import { paginate, type ListQuery } from "../pagination.ts";
+import { matches_filter } from "./filter.ts";
+import { paginate, type ListQuery } from "./pagination.ts";
 import {
-  group_member_schema,
+  GroupMemberSchema,
   type GroupListResponse,
   type GroupMember,
   type GroupResource,
@@ -72,7 +72,7 @@ async function replace_group_members(
 }
 
 function parse_group_members(value: unknown): GroupMember[] {
-  const result = group_member_schema.array().safeParse(value);
+  const result = GroupMemberSchema.array().safeParse(value);
   if (!result.success)
     throw new ScimServiceError(
       "group_members_invalid",
