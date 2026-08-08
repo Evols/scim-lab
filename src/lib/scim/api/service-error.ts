@@ -1,4 +1,4 @@
-import { ScimServiceError } from "../services/error.ts";
+import { ScimServiceError } from "../server/error.ts";
 import { scim_error } from "./error.ts";
 
 type ErrorMapping = {

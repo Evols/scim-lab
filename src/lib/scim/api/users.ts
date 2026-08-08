@@ -6,8 +6,8 @@ import {
   list_users,
   patch_user,
   replace_user,
-} from "../services/users.ts";
-import { base_url } from "../services/resources.ts";
+} from "../server/users.ts";
+import { base_url } from "../server/resources.ts";
 import {
   patch_request_schema,
   user_list_response_schema,

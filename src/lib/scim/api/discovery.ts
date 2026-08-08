@@ -4,7 +4,7 @@ import {
   resource_types,
   schema_documents,
   service_provider_config,
-} from "../services/discovery.ts";
+} from "../server/discovery.ts";
 import {
   resource_type_list_schema,
   resource_type_schema,

@@ -6,8 +6,8 @@ import {
   list_groups,
   patch_group,
   replace_group,
-} from "../services/groups.ts";
-import { base_url } from "../services/resources.ts";
+} from "../server/groups.ts";
+import { base_url } from "../server/resources.ts";
 import {
   group_list_response_schema,
   group_resource_schema,
