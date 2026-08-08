@@ -10,7 +10,7 @@ const return_to = `/?server=${server.id}&view=settings`;
 <div class="mx-auto max-w-3xl">
 	<div><h1 class="text-2xl font-semibold tracking-[-0.03em]">Settings</h1><p class="mt-1 text-sm text-[#71717a]">Manage this server, its credentials, and access.</p></div>
 
-	<div class="mt-8 space-y-8">
+	<div class="mt-8 mb-40 space-y-8">
 		<section class="grid gap-5 border-b border-[#e4e4e7] pb-8 sm:grid-cols-[190px_1fr]">
 			<div><h2 class="text-sm font-semibold">General</h2><p class="mt-1 text-sm leading-5 text-[#71717a]">The name shown in your server picker.</p></div>
 			<form class="rounded-lg border border-[#e4e4e7] bg-white p-5 shadow-xs" action="/api/console" method="POST"><input type="hidden" name="intent" value="rename_server"/><input type="hidden" name="server_id" value={server.id}/><input type="hidden" name="return_to" value={return_to}/><label class="text-sm font-medium" for="server-name">Server name</label><input class="mt-2 h-10 w-full rounded-md border border-[#d4d4d8] bg-white px-3 text-sm shadow-xs outline-none focus:ring-2 focus:ring-[#e4e4e7]" id="server-name" name="name" maxlength="80" value={server.name} required/><div class="mt-4 flex justify-end"><button class="h-9 cursor-pointer rounded-md bg-[#18181b] px-4 text-sm font-medium text-white shadow-sm hover:bg-[#27272a]" type="submit">Save</button></div></form>

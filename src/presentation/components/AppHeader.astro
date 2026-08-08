@@ -1,6 +1,7 @@
 ---
 import { get_server_lifecycle } from '../../db';
 import type { ConsoleUserRecord, ScimServerRecord } from '../../db/schema.ts';
+import ResourceLink from './ResourceLink.astro';
 
 interface Props {
 	user: ConsoleUserRecord;
@@ -12,11 +13,6 @@ interface Props {
 }
 
 const { user, servers, selected_server, view, allow_create, selected_lifecycle } = Astro.props;
-const resource_links = selected_server ? [
-	{ id: 'users', label: 'Users' },
-	{ id: 'groups', label: 'Groups' },
-	{ id: 'logs', label: 'Logs' },
-] : [];
 const selected_query = selected_server ? `?server=${selected_server.id}` : '';
 ---
 
@@ -51,12 +47,14 @@ const selected_query = selected_server ? `?server=${selected_server.id}` : '';
 			</details>
 		)}
 
-		<nav class="ml-1 hidden items-center gap-1 md:flex" aria-label="Server resources">
-			{resource_links.map((item) => <a class:list={['rounded-md px-3 py-2 text-sm font-medium no-underline transition-colors', item.id === view ? 'bg-[#f4f4f5] text-[#09090b]' : 'text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#09090b]']} href={`${selected_query}&view=${item.id}`} aria-current={item.id === view ? 'page' : undefined}>{item.label}</a>)}
-		</nav>
+		{selected_server && <nav class="ml-1 hidden items-center gap-1 md:flex" aria-label="Server resources">
+			<ResourceLink label="Users" href={`${selected_query}&view=users`} active={view === 'users'} />
+			<ResourceLink label="Groups" href={`${selected_query}&view=groups`} active={view === 'groups'} />
+			<ResourceLink label="Logs" href={`${selected_query}&view=logs`} active={view === 'logs'} />
+      <ResourceLink label="Settings" href={`${selected_query}&view=settings`} active={view === 'settings'} />
+		</nav>}
 
 		<div class="ml-auto flex items-center gap-2">
-			{selected_server && <a class:list={['grid size-9 place-items-center rounded-md border text-base no-underline shadow-xs transition', view === 'settings' ? 'border-[#d4d4d8] bg-[#f4f4f5] text-[#09090b]' : 'border-[#e4e4e7] bg-white text-[#52525b] hover:bg-[#f4f4f5]']} href={`${selected_query}&view=settings`} aria-label="Server settings">⚙</a>}
 			{user.is_anonymous ? (
 				<a class="inline-flex h-9 items-center rounded-md bg-[#18181b] px-3.5 text-sm font-medium text-white no-underline shadow-sm hover:bg-[#27272a]" href="/auth/login">Sign in</a>
 			) : (
@@ -71,11 +69,6 @@ const selected_query = selected_server ? `?server=${selected_server.id}` : '';
 			)}
 		</div>
 	</div>
-
-	{resource_links.length > 0 && <nav class="mx-auto flex h-11 max-w-7xl items-center gap-1 overflow-x-auto border-t border-[#f4f4f5] px-4 md:hidden" aria-label="Server resources">
-		<a class:list={['rounded-md px-3 py-1.5 text-sm font-medium no-underline', view === 'overview' ? 'bg-[#f4f4f5] text-[#09090b]' : 'text-[#71717a]']} href={selected_query || '/'}>Home</a>
-		{resource_links.map((item) => <a class:list={['rounded-md px-3 py-1.5 text-sm font-medium no-underline', item.id === view ? 'bg-[#f4f4f5] text-[#09090b]' : 'text-[#71717a]']} href={`${selected_query}&view=${item.id}`}>{item.label}</a>)}
-	</nav>}
 </header>
 
 <dialog class="w-[min(92vw,440px)] rounded-lg border border-[#e4e4e7] bg-white p-0 text-[#09090b] shadow-2xl backdrop:bg-black/50" data-create-dialog>
