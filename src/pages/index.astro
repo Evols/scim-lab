@@ -79,7 +79,9 @@ const [users, groups, events, invites] = selected_server ? await Promise.all([
 		document.querySelectorAll<HTMLElement>('[data-copy]').forEach((button) => {
 			button.addEventListener('click', async () => {
 				const value = button.dataset.copy;
-				if (!value) return;
+				if (!value) {
+					return;
+				}
 				await navigator.clipboard.writeText(value);
 				const previous = button.textContent;
 				button.textContent = 'Copied';

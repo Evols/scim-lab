@@ -48,10 +48,7 @@ const user_data_attributes = {
   addresses: z.array(AddressSchema).nullable().optional(),
   entitlements: z.array(MultiValuedAttributeSchema).nullable().optional(),
   roles: z.array(MultiValuedAttributeSchema).nullable().optional(),
-  x509Certificates: z
-    .array(MultiValuedAttributeSchema)
-    .nullable()
-    .optional(),
+  x509Certificates: z.array(MultiValuedAttributeSchema).nullable().optional(),
 };
 
 const user_attributes = {
@@ -149,12 +146,9 @@ export function ListResponseSchema<S extends z.ZodType>(resourceSchema: S) {
   });
 }
 
-export const UserListResponseSchema =
-  ListResponseSchema(UserResourceSchema);
+export const UserListResponseSchema = ListResponseSchema(UserResourceSchema);
 export type UserListResponse = z.infer<typeof UserListResponseSchema>;
-export const GroupListResponseSchema = ListResponseSchema(
-  GroupResourceSchema,
-);
+export const GroupListResponseSchema = ListResponseSchema(GroupResourceSchema);
 export type GroupListResponse = z.infer<typeof GroupListResponseSchema>;
 
 export const ScimErrorSchema = z.object({
@@ -184,9 +178,7 @@ export const ServiceProviderConfigSchema = z.looseObject({
     }),
   ),
 });
-export type ServiceProviderConfig = z.infer<
-  typeof ServiceProviderConfigSchema
->;
+export type ServiceProviderConfig = z.infer<typeof ServiceProviderConfigSchema>;
 
 export const SchemaDocument = z.looseObject({
   schemas: z.array(z.string()),
@@ -196,9 +188,7 @@ export const SchemaDocument = z.looseObject({
   attributes: z.array(z.looseObject({ name: z.string(), type: z.string() })),
 });
 export type SchemaDocument = z.infer<typeof SchemaDocument>;
-export const SchemaDocumentListSchema = ListResponseSchema(
-  SchemaDocument,
-);
+export const SchemaDocumentListSchema = ListResponseSchema(SchemaDocument);
 
 export const ResourceType = z.looseObject({
   schemas: z.array(z.string()),
@@ -208,5 +198,4 @@ export const ResourceType = z.looseObject({
   schema: z.string(),
 });
 export type ResourceType = z.infer<typeof ResourceType>;
-export const ResourceTypeListSchema =
-  ListResponseSchema(ResourceType);
+export const ResourceTypeListSchema = ListResponseSchema(ResourceType);

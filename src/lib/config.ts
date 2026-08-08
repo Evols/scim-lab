@@ -2,8 +2,12 @@ const is_production = process.env.NODE_ENV === "production";
 
 function required_value(name: string, development_fallback?: string): string {
   const value = process.env[name]?.trim();
-  if (value) return value;
-  if (!is_production && development_fallback) return development_fallback;
+  if (value) {
+    return value;
+  }
+  if (!is_production && development_fallback) {
+    return development_fallback;
+  }
   throw new Error(`Missing required environment variable: ${name}`);
 }
 

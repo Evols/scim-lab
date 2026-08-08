@@ -21,11 +21,12 @@ export function discovery_response(
   server: ScimServerRecord,
   url: URL,
 ): Response {
-  if (resource === "ServiceProviderConfig")
+  if (resource === "ServiceProviderConfig") {
     return json_response(
       service_provider_config(server),
       ServiceProviderConfigSchema,
     );
+  }
   if (resource === "Schemas") {
     const match = resource_id
       ? schema_documents.find(

@@ -4,15 +4,20 @@ function read_attribute(resource: object, attribute: string): unknown {
   const parts = attribute.split(".");
   const visit = (current: unknown, remaining: string[]): unknown => {
     // Dotted paths traverse every entry in multi-valued SCIM attributes.
-    if (Array.isArray(current))
+    if (Array.isArray(current)) {
       return current
         .flatMap((entry) => {
           const value = visit(entry, remaining);
           return Array.isArray(value) ? value : [value];
         })
         .filter((value) => value !== undefined);
-    if (!remaining.length) return current;
-    if (!current || typeof current !== "object") return undefined;
+    }
+    if (!remaining.length) {
+      return current;
+    }
+    if (!current || typeof current !== "object") {
+      return undefined;
+    }
     const record = current as DynamicObject;
     const part = remaining[0]!;
     const key = Object.keys(record).find(
@@ -37,18 +42,27 @@ function split_logical(
     index += 1
   ) {
     const character = filter[index];
-    if (character === '"' && filter[index - 1] !== "\\") quoted = !quoted;
-    if (quoted) continue;
-    if (character === "(") depth += 1;
-    if (character === ")") depth -= 1;
+    if (character === '"' && filter[index - 1] !== "\\") {
+      quoted = !quoted;
+    }
+    if (quoted) {
+      continue;
+    }
+    if (character === "(") {
+      depth += 1;
+    }
+    if (character === ")") {
+      depth -= 1;
+    }
     const fragment = filter
       .slice(index, index + operator.length + 2)
       .toLowerCase();
-    if (depth === 0 && fragment === ` ${operator} `)
+    if (depth === 0 && fragment === ` ${operator} `) {
       return [
         filter.slice(0, index),
         filter.slice(index + operator.length + 2),
       ];
+    }
   }
   return null;
 }
@@ -58,8 +72,9 @@ function compare_filter(
   operator: string,
   expected?: string,
 ): boolean {
-  if (operator === "pr")
+  if (operator === "pr") {
     return actual !== undefined && actual !== null && actual !== "";
+  }
   const values = Array.isArray(actual) ? actual : [actual];
   return values.some((value) => {
     const normalized =
@@ -68,11 +83,21 @@ function compare_filter(
         : String(value ?? "");
     const left = normalized.toLocaleLowerCase();
     const right = String(expected ?? "").toLocaleLowerCase();
-    if (operator === "eq") return left === right;
-    if (operator === "ne") return left !== right;
-    if (operator === "co") return left.includes(right);
-    if (operator === "sw") return left.startsWith(right);
-    if (operator === "ew") return left.endsWith(right);
+    if (operator === "eq") {
+      return left === right;
+    }
+    if (operator === "ne") {
+      return left !== right;
+    }
+    if (operator === "co") {
+      return left.includes(right);
+    }
+    if (operator === "sw") {
+      return left.startsWith(right);
+    }
+    if (operator === "ew") {
+      return left.endsWith(right);
+    }
     return false;
   });
 }
@@ -82,19 +107,26 @@ export function matches_filter<T extends object>(
   raw_filter: string,
 ): boolean {
   let filter = raw_filter.trim();
-  if (filter.startsWith("(") && filter.endsWith(")"))
+  if (filter.startsWith("(") && filter.endsWith(")")) {
     filter = filter.slice(1, -1).trim();
+  }
   const or_parts = split_logical(filter, "or");
-  if (or_parts) return or_parts.some((part) => matches_filter(resource, part));
+  if (or_parts) {
+    return or_parts.some((part) => matches_filter(resource, part));
+  }
   const and_parts = split_logical(filter, "and");
-  if (and_parts)
+  if (and_parts) {
     return and_parts.every((part) => matches_filter(resource, part));
-  if (/^not\s+/i.test(filter))
+  }
+  if (/^not\s+/i.test(filter)) {
     return !matches_filter(resource, filter.replace(/^not\s+/i, ""));
+  }
   const comparison = filter.match(
     /^([\w.$:-]+)\s+(eq|ne|co|sw|ew|pr)(?:\s+(?:"((?:\\"|[^"])*)"|(true|false|null|-?\d+(?:\.\d+)?)))?$/i,
   );
-  if (!comparison) throw new Error("Unsupported or invalid SCIM filter.");
+  if (!comparison) {
+    throw new Error("Unsupported or invalid SCIM filter.");
+  }
   const [, attribute, operator, quoted, literal] = comparison;
   return compare_filter(
     read_attribute(resource, attribute!),

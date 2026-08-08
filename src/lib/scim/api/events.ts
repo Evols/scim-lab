@@ -22,7 +22,9 @@ function sanitized_headers(headers: Headers): Record<string, string> {
 
 function truncate(value: string): { value: string; truncated: boolean } {
   const bytes = Buffer.byteLength(value);
-  if (bytes <= MAX_BODY_BYTES) return { value, truncated: false };
+  if (bytes <= MAX_BODY_BYTES) {
+    return { value, truncated: false };
+  }
   return {
     value: Buffer.from(value).subarray(0, MAX_BODY_BYTES).toString("utf8"),
     truncated: true,
@@ -30,11 +32,17 @@ function truncate(value: string): { value: string; truncated: boolean } {
 }
 
 function redact_body(value: string): string {
-  if (!value) return value;
+  if (!value) {
+    return value;
+  }
   try {
     const visit = (input: unknown): unknown => {
-      if (Array.isArray(input)) return input.map(visit);
-      if (!input || typeof input !== "object") return input;
+      if (Array.isArray(input)) {
+        return input.map(visit);
+      }
+      if (!input || typeof input !== "object") {
+        return input;
+      }
       return Object.fromEntries(
         Object.entries(input as DynamicObject).map(([key, entry]) => [
           key,

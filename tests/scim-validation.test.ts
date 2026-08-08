@@ -9,7 +9,9 @@ import {
 } from "../src/lib/scim/schemas.ts";
 
 async function error_payload(result: ReturnType<typeof validate_json_body>) {
-  if (result.success) throw new Error("Expected body validation to fail.");
+  if (result.success) {
+    throw new Error("Expected body validation to fail.");
+  }
   return result.response.json() as Promise<{
     detail: string;
     scimType: string;
@@ -47,8 +49,9 @@ describe("SCIM request structure validation", () => {
     );
 
     expect(result.success).toBe(true);
-    if (result.success)
+    if (result.success) {
       expect(result.data[extension]).toEqual({ employeeNumber: "123" });
+    }
   });
 
   it("requires group members to have a string value", async () => {

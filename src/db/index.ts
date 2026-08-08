@@ -65,7 +65,9 @@ export function get_server_lifecycle(
   const deactivated_at =
     server.deactivated_at ??
     new Date(server.last_console_access_at.getTime() + active_window_ms);
-  if (inactive_ms < active_window_ms && !server.deactivated_at) return "active";
+  if (inactive_ms < active_window_ms && !server.deactivated_at) {
+    return "active";
+  }
   const recovery_ms = (is_anonymous ? 30 : 90) * 86_400_000;
   return now.getTime() <= deactivated_at.getTime() + recovery_ms
     ? "deactivated"
@@ -87,7 +89,9 @@ export async function find_console_session(
       ),
     )
     .limit(1);
-  if (!rows[0]) return null;
+  if (!rows[0]) {
+    return null;
+  }
   await db
     .update(console_sessions)
     .set({
@@ -108,7 +112,9 @@ export async function create_anonymous_context(): Promise<ConsoleContext> {
       .insert(console_users)
       .values({})
       .returning();
-    if (!user) throw new Error("Unable to create anonymous console user.");
+    if (!user) {
+      throw new Error("Unable to create anonymous console user.");
+    }
     await transaction.insert(console_sessions).values({
       token_hash: hash_secret(session_token),
       user_id: user.id,
@@ -123,7 +129,9 @@ export async function create_anonymous_context(): Promise<ConsoleContext> {
         bearer_token_encrypted: encrypt_secret(bearer_token),
       })
       .returning();
-    if (!server) throw new Error("Unable to create the default SCIM server.");
+    if (!server) {
+      throw new Error("Unable to create the default SCIM server.");
+    }
     await transaction
       .insert(server_members)
       .values({ server_id: server.id, user_id: user.id });
@@ -182,7 +190,9 @@ export async function take_flash(
         ),
       )
       .limit(1);
-    if (!rows[0]) return null;
+    if (!rows[0]) {
+      return null;
+    }
     await transaction
       .delete(console_flashes)
       .where(eq(console_flashes.token_hash, rows[0].token_hash));
@@ -207,8 +217,9 @@ export async function list_servers_for_user(user_id: string) {
         get_server_lifecycle(server, creator.is_anonymous) === "expired",
     )
     .map(({ server }) => server.id);
-  if (expired_ids.length)
+  if (expired_ids.length) {
     await db.delete(scim_servers).where(inArray(scim_servers.id, expired_ids));
+  }
   return rows.filter(({ server }) => !expired_ids.includes(server.id));
 }
 
@@ -247,7 +258,9 @@ export async function mark_server_deactivated(
   is_anonymous: boolean,
 ): Promise<ScimServerRecord> {
   const lifecycle = get_server_lifecycle(server, is_anonymous);
-  if (lifecycle === "active" || server.deactivated_at) return server;
+  if (lifecycle === "active" || server.deactivated_at) {
+    return server;
+  }
   const active_days = is_anonymous ? 7 : 30;
   const deactivated_at = new Date(
     server.last_console_access_at.getTime() + active_days * 86_400_000,
@@ -269,8 +282,9 @@ export async function reactivate_server(
     !access ||
     access.creator.is_anonymous ||
     get_server_lifecycle(access.server, false) === "expired"
-  )
+  ) {
     return false;
+  }
   await touch_server_console(server_id);
   return true;
 }
@@ -284,8 +298,9 @@ export async function create_server(user_id: string, name: string) {
       .select({ value: count() })
       .from(scim_servers)
       .where(eq(scim_servers.created_by_user_id, user_id));
-    if (Number(value) >= 3)
+    if (Number(value) >= 3) {
       throw new Error("You can create at most three SCIM servers.");
+    }
     const bearer_token = generated_bearer_token();
     const [server] = await transaction
       .insert(scim_servers)
@@ -296,7 +311,9 @@ export async function create_server(user_id: string, name: string) {
         bearer_token_encrypted: encrypt_secret(bearer_token),
       })
       .returning();
-    if (!server) throw new Error("Unable to create SCIM server.");
+    if (!server) {
+      throw new Error("Unable to create SCIM server.");
+    }
     await transaction
       .insert(server_members)
       .values({ server_id: server.id, user_id });
@@ -309,7 +326,9 @@ export async function read_server_credential(
   server_id: string,
 ): Promise<ServerCredential> {
   const access = await get_server_for_user(user_id, server_id);
-  if (!access) throw new Error("Server not found.");
+  if (!access) {
+    throw new Error("Server not found.");
+  }
   if (access.server.auth_mode === "basic") {
     if (!access.server.basic_password_encrypted) {
       throw new Error(
@@ -340,7 +359,9 @@ export async function rename_server(
   name: string,
 ): Promise<void> {
   const access = await get_server_for_user(user_id, server_id);
-  if (!access) throw new Error("Server not found.");
+  if (!access) {
+    throw new Error("Server not found.");
+  }
   await db
     .update(scim_servers)
     .set({ name: name.slice(0, 80), updated_at: new Date() })
@@ -352,7 +373,9 @@ export async function delete_server(
   server_id: string,
 ): Promise<void> {
   const access = await get_server_for_user(user_id, server_id);
-  if (!access) throw new Error("Server not found.");
+  if (!access) {
+    throw new Error("Server not found.");
+  }
   await db.delete(scim_servers).where(eq(scim_servers.id, server_id));
 }
 
@@ -362,7 +385,9 @@ export async function rotate_server_auth(
   auth_mode: "bearer" | "basic",
 ) {
   const access = await get_server_for_user(user_id, server_id);
-  if (!access) throw new Error("Server not found.");
+  if (!access) {
+    throw new Error("Server not found.");
+  }
   if (auth_mode === "bearer") {
     const credential = generated_bearer_token();
     await db
@@ -404,8 +429,9 @@ export async function create_share_invite(user_id: string, server_id: string) {
     .from(console_users)
     .where(eq(console_users.id, user_id))
     .limit(1);
-  if (!access || callers[0]?.is_anonymous !== false)
+  if (!access || callers[0]?.is_anonymous !== false) {
     throw new Error("Sign in before sharing a server.");
+  }
   const token = random_secret();
   await db.insert(share_invites).values({
     token_hash: hash_secret(token),
@@ -435,7 +461,9 @@ export async function revoke_share_invite(
   token_hash: string,
 ): Promise<void> {
   const access = await get_server_for_user(user_id, server_id);
-  if (!access) throw new Error("Server not found.");
+  if (!access) {
+    throw new Error("Server not found.");
+  }
   await db
     .update(share_invites)
     .set({ revoked_at: new Date() })
@@ -468,7 +496,9 @@ export async function accept_share_invite(
   token: string,
 ): Promise<string> {
   const match = await get_share_invite(token);
-  if (!match) throw new Error("This sharing link is invalid or expired.");
+  if (!match) {
+    throw new Error("This sharing link is invalid or expired.");
+  }
   await db
     .insert(server_members)
     .values({ server_id: match.server.id, user_id })
@@ -505,7 +535,9 @@ export async function take_oidc_transaction(state: string) {
         ),
       )
       .limit(1);
-    if (!rows[0]) return null;
+    if (!rows[0]) {
+      return null;
+    }
     await transaction
       .delete(oidc_transactions)
       .where(eq(oidc_transactions.state_hash, rows[0].state_hash));
@@ -547,7 +579,9 @@ export async function complete_oidc_login(
         })
         .where(eq(console_users.id, anonymous_user_id))
         .returning();
-      if (!upgraded) throw new Error("Unable to upgrade account.");
+      if (!upgraded) {
+        throw new Error("Unable to upgrade account.");
+      }
       await transaction
         .update(scim_servers)
         .set({
@@ -661,14 +695,18 @@ export async function list_console_events(
     eq(scim_events.server_id, server_id),
     gt(scim_events.created_at, new Date(Date.now() - 30 * 86_400_000)),
   ];
-  if (status_filter === "success") conditions.push(lt(scim_events.status, 400));
-  if (status_filter === "error")
+  if (status_filter === "success") {
+    conditions.push(lt(scim_events.status, 400));
+  }
+  if (status_filter === "error") {
     conditions.push(sql`${scim_events.status} >= 400`);
+  }
   if (
     method_filter &&
     ["GET", "POST", "PUT", "PATCH", "DELETE"].includes(method_filter)
-  )
+  ) {
     conditions.push(eq(scim_events.method, method_filter));
+  }
   return db
     .select()
     .from(scim_events)

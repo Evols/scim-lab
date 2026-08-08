@@ -28,7 +28,9 @@ const byte_length = new TextEncoder().encode(raw_body ?? '').length;
 const size_label = byte_length < 1_000 ? `${byte_length} B` : `${(byte_length / 1_000).toFixed(1)} kB`;
 
 function tokenize(line: string): Token[] {
-	if (!is_json) return [{ value: line, kind: 'plain' }];
+	if (!is_json) {
+		return [{ value: line, kind: 'plain' }];
+	}
 
 	const tokens: Token[] = [];
 	const pattern = /"(?:\\u[\da-fA-F]{4}|\\[^u]|[^\\"])*"|true|false|null|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?/g;
@@ -36,17 +38,23 @@ function tokenize(line: string): Token[] {
 
 	for (const match of line.matchAll(pattern)) {
 		const index = match.index ?? 0;
-		if (index > cursor) tokens.push({ value: line.slice(cursor, index), kind: 'plain' });
+		if (index > cursor) {
+			tokens.push({ value: line.slice(cursor, index), kind: 'plain' });
+		}
 
 		const value = match[0];
 		let kind: TokenKind = 'literal';
-		if (value.startsWith('"')) kind = line.slice(index + value.length).trimStart().startsWith(':') ? 'key' : 'string';
+		if (value.startsWith('"')) {
+			kind = line.slice(index + value.length).trimStart().startsWith(':') ? 'key' : 'string';
+		}
 		else if (/^-?\d/.test(value)) kind = 'number';
 		tokens.push({ value, kind });
 		cursor = index + value.length;
 	}
 
-	if (cursor < line.length) tokens.push({ value: line.slice(cursor), kind: 'plain' });
+	if (cursor < line.length) {
+		tokens.push({ value: line.slice(cursor), kind: 'plain' });
+	}
 	return tokens.length ? tokens : [{ value: ' ', kind: 'plain' }];
 }
 
@@ -117,7 +125,9 @@ const tone_classes = tone === 'request'
 
 <script>
 	document.querySelectorAll<HTMLElement>('[data-payload-viewer]').forEach((viewer) => {
-		if (viewer.dataset.enhanced) return;
+		if (viewer.dataset.enhanced) {
+			return;
+		}
 		viewer.dataset.enhanced = 'true';
 
 		const wrap_button = viewer.querySelector<HTMLButtonElement>('[data-payload-wrap]');
@@ -131,7 +141,9 @@ const tone_classes = tone === 'request'
 		const copy_button = viewer.querySelector<HTMLButtonElement>('[data-payload-copy]');
 		const source = viewer.querySelector<HTMLTextAreaElement>('[data-payload-source]');
 		copy_button?.addEventListener('click', async () => {
-			if (!source) return;
+			if (!source) {
+				return;
+			}
 			await navigator.clipboard.writeText(source.value);
 			copy_button.textContent = 'Copied';
 			window.setTimeout(() => { copy_button.textContent = 'Copy'; }, 1400);

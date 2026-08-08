@@ -21,7 +21,9 @@ export function authenticate(
     };
   }
   const match = authorization?.match(/^Basic\s+(.+)$/i);
-  if (!match) return { success: false, mode: null };
+  if (!match) {
+    return { success: false, mode: null };
+  }
   try {
     const decoded = Buffer.from(match[1]!, "base64").toString("utf8");
     // Split only on the first colon because passwords may contain colons.

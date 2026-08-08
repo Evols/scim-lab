@@ -19,7 +19,9 @@ async function find_user(server_id: string, user_id: string) {
     .from(scim_users)
     .where(and(eq(scim_users.server_id, server_id), eq(scim_users.id, user_id)))
     .limit(1);
-  if (!rows[0]) throw new ScimServiceError("user_not_found", "User not found.");
+  if (!rows[0]) {
+    throw new ScimServiceError("user_not_found", "User not found.");
+  }
   return rows[0];
 }
 
@@ -66,8 +68,9 @@ export async function create_user(
   origin: string,
 ): Promise<UserResource> {
   const user_name = String(input.userName ?? "").trim();
-  if (!user_name)
+  if (!user_name) {
     throw new ScimServiceError("user_name_required", "userName is required.");
+  }
 
   return db.transaction(async (transaction) => {
     // Serialize the count and insert per server so concurrent requests cannot
@@ -79,11 +82,12 @@ export async function create_user(
       .select({ value: count() })
       .from(scim_users)
       .where(eq(scim_users.server_id, server_id));
-    if (Number(value) >= 100)
+    if (Number(value) >= 100) {
       throw new ScimServiceError(
         "user_limit_reached",
         "This server has reached its 100-user limit.",
       );
+    }
 
     try {
       const [created] = await transaction
@@ -99,11 +103,12 @@ export async function create_user(
         .returning();
       return user_resource(created!, origin);
     } catch (error) {
-      if ((error as { code?: string }).code === "23505")
+      if ((error as { code?: string }).code === "23505") {
         throw new ScimServiceError(
           "user_name_not_unique",
           "userName must be unique.",
         );
+      }
       throw error;
     }
   });
@@ -125,8 +130,9 @@ export async function replace_user(
 ): Promise<UserResource> {
   const existing = await find_user(server_id, user_id);
   const user_name = String(input.userName ?? "").trim();
-  if (!user_name)
+  if (!user_name) {
     throw new ScimServiceError("user_name_required", "userName is required.");
+  }
 
   try {
     const [updated] = await db
@@ -144,11 +150,12 @@ export async function replace_user(
       .returning();
     return user_resource(updated!, origin);
   } catch (error) {
-    if ((error as { code?: string }).code === "23505")
+    if ((error as { code?: string }).code === "23505") {
       throw new ScimServiceError(
         "user_name_not_unique",
         "userName must be unique.",
       );
+    }
     throw error;
   }
 }
@@ -163,11 +170,12 @@ export async function patch_user(
   let resource = await user_resource(existing, origin);
   for (const operation of operations) {
     const op = operation.op.toLowerCase();
-    if (!["add", "replace", "remove"].includes(op))
+    if (!["add", "replace", "remove"].includes(op)) {
       throw new ScimServiceError(
         "patch_operation_unsupported",
         "Unsupported PATCH operation.",
       );
+    }
     resource = merge_patch_value(
       resource,
       operation.path || undefined,
@@ -177,11 +185,12 @@ export async function patch_user(
   }
 
   const user_name = String(resource.userName ?? "").trim();
-  if (!user_name)
+  if (!user_name) {
     throw new ScimServiceError(
       "user_patch_removes_user_name",
       "PATCH cannot remove userName.",
     );
+  }
   const [updated] = await db
     .update(scim_users)
     .set({

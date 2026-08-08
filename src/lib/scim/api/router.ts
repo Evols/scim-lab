@@ -26,7 +26,9 @@ export async function handle_scim_request(
     )
     .where(eq(scim_servers.id, server_id))
     .limit(1);
-  if (!rows[0]) return scim_error(404, "SCIM server not found.");
+  if (!rows[0]) {
+    return scim_error(404, "SCIM server not found.");
+  }
 
   const { server, creator } = rows[0];
   const auth = authenticate(server, request.headers.get("authorization"));
@@ -44,12 +46,12 @@ export async function handle_scim_request(
     // deleting the server also cascades its event records.
     await db.delete(scim_servers).where(eq(scim_servers.id, server.id));
     return scim_error(404, "SCIM server not found.");
-  } else if (get_server_lifecycle(server, creator.is_anonymous) !== "active")
+  } else if (get_server_lifecycle(server, creator.is_anonymous) !== "active") {
     response = scim_error(
       503,
       "This SCIM server is deactivated. Open its console to reactivate it.",
     );
-  else if (
+  } else if (
     ["POST", "PUT", "PATCH"].includes(request.method) &&
     !/^(application\/scim\+json|application\/json)(?:;|$)/i.test(
       request.headers.get("content-type") ?? "",
@@ -65,7 +67,7 @@ export async function handle_scim_request(
     const [resource, resource_id] = segments;
     const url = new URL(request.url);
     try {
-      if (resource === "Users")
+      if (resource === "Users") {
         response = await handle_users(
           request.method,
           resource_id,
@@ -74,7 +76,7 @@ export async function handle_scim_request(
           url,
           body,
         );
-      else if (resource === "Groups")
+      } else if (resource === "Groups") {
         response = await handle_groups(
           request.method,
           resource_id,
@@ -83,9 +85,9 @@ export async function handle_scim_request(
           url,
           body,
         );
-      else if (request.method !== "GET")
+      } else if (request.method !== "GET") {
         response = scim_error(405, "Method not allowed.");
-      else response = discovery_response(resource, resource_id, server, url);
+      } else response = discovery_response(resource, resource_id, server, url);
     } catch (error) {
       console.error("SCIM request failed", error);
       response = scim_error(

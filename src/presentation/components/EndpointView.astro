@@ -62,7 +62,9 @@ const credential_label = anonymous_credential?.auth_mode === 'basic' ? 'Password
 	const credential_error = credential_card?.querySelector<HTMLElement>('[data-credential-error]');
 
 	reveal_button?.addEventListener('click', async () => {
-		if (!credential_card || !credential_fields || !credential_error) return;
+		if (!credential_card || !credential_fields || !credential_error) {
+			return;
+		}
 		if (credential_card.dataset.loaded === 'true') {
 			const will_hide = !credential_fields.classList.contains('hidden');
 			credential_fields.classList.toggle('hidden', will_hide);
@@ -77,7 +79,9 @@ const credential_label = anonymous_credential?.auth_mode === 'basic' ? 'Password
 			form.set('server_id', credential_card.dataset.serverId ?? '');
 			const response = await fetch('/api/credential', { method: 'POST', body: form });
 			const result = await response.json() as { auth_mode?: string; username?: string | null; credential?: string; error?: string };
-			if (!response.ok || !result.credential) throw new Error(result.error ?? 'Unable to reveal the credential.');
+			if (!response.ok || !result.credential) {
+				throw new Error(result.error ?? 'Unable to reveal the credential.');
+			}
 			const username_row = credential_card.querySelector<HTMLElement>('[data-username-row]');
 			const username_value = credential_card.querySelector<HTMLElement>('[data-credential-username]');
 			const credential_value = credential_card.querySelector<HTMLElement>('[data-credential-value]');
@@ -87,8 +91,12 @@ const credential_label = anonymous_credential?.auth_mode === 'basic' ? 'Password
 				username_value.textContent = result.username ?? '';
 				username_row.querySelector<HTMLElement>('[data-copy]')!.dataset.copy = result.username ?? '';
 			}
-			if (credential_value) credential_value.textContent = result.credential;
-			if (credential_label_element) credential_label_element.textContent = result.auth_mode === 'basic' ? 'Password' : 'Bearer token';
+			if (credential_value) {
+				credential_value.textContent = result.credential;
+			}
+			if (credential_label_element) {
+				credential_label_element.textContent = result.auth_mode === 'basic' ? 'Password' : 'Bearer token';
+			}
 			credential_value?.parentElement?.querySelector<HTMLElement>('[data-copy]')?.setAttribute('data-copy', result.credential);
 			credential_card.dataset.loaded = 'true';
 			credential_fields.classList.remove('hidden');

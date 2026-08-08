@@ -27,7 +27,9 @@ export function safe_hash_equal(
   stored_hash: string | null,
   candidate: string,
 ): boolean {
-  if (!stored_hash) return false;
+  if (!stored_hash) {
+    return false;
+  }
   const candidate_hash = hash_secret(candidate);
   const stored = Buffer.from(stored_hash, "hex");
   const compared = Buffer.from(candidate_hash, "hex");

@@ -25,7 +25,9 @@ const error_mappings: Record<ScimServiceError["code"], ErrorMapping> = {
 };
 
 export function service_error_response(error: unknown): Response | null {
-  if (!(error instanceof ScimServiceError)) return null;
+  if (!(error instanceof ScimServiceError)) {
+    return null;
+  }
   const mapping = error_mappings[error.code];
   return scim_error(mapping.status, error.message, mapping.scim_type);
 }

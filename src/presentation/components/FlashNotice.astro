@@ -25,6 +25,8 @@ const has_secret = Boolean(invite_url);
 
 <script>
 	const flash_dialog = document.querySelector<HTMLDialogElement>('[data-flash-dialog]');
-	if (flash_dialog && !flash_dialog.open) flash_dialog.showModal();
+	if (flash_dialog && !flash_dialog.open) {
+		flash_dialog.showModal();
+	}
 	document.querySelectorAll('[data-close-flash]').forEach((button) => button.addEventListener('click', () => flash_dialog?.close()));
 </script>

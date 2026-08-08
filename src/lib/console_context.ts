@@ -37,7 +37,9 @@ export async function get_console_context(
   const raw_token = cookies.get(session_cookie_name)?.value;
   if (raw_token) {
     const context = await find_console_session(raw_token);
-    if (context) return context;
+    if (context) {
+      return context;
+    }
   }
   const context = await create_anonymous_context();
   cookies.set(
@@ -53,7 +55,9 @@ export async function get_flash(
   user_id: string,
 ): Promise<Record<string, unknown> | null> {
   const token = cookies.get(flash_cookie_name)?.value;
-  if (!token) return null;
+  if (!token) {
+    return null;
+  }
   cookies.delete(flash_cookie_name, { path: "/" });
   return take_flash(user_id, token);
 }

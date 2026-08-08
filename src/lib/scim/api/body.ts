@@ -19,7 +19,7 @@ export function validate_json_body<S extends z.ZodType>(
   body: string,
   schema: S,
 ): BodyValidationResult<z.output<S>> {
-  if (!body)
+  if (!body) {
     return {
       success: false,
       response: scim_error(
@@ -28,6 +28,7 @@ export function validate_json_body<S extends z.ZodType>(
         "invalidSyntax",
       ),
     };
+  }
 
   let parsed: unknown;
   try {
@@ -42,7 +43,7 @@ export function validate_json_body<S extends z.ZodType>(
       ),
     };
   }
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
     return {
       success: false,
       response: scim_error(
@@ -51,6 +52,7 @@ export function validate_json_body<S extends z.ZodType>(
         "invalidSyntax",
       ),
     };
+  }
 
   const result = schema.safeParse(parsed);
   return result.success

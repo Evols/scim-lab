@@ -12,7 +12,9 @@ let error_message = invite ? '' : 'This sharing link is invalid, revoked, or exp
 
 if (Astro.request.method === 'POST' && invite && !context.user.is_anonymous) {
 	const origin = Astro.request.headers.get('origin');
-	if (origin && origin !== Astro.url.origin) return new Response('Invalid request origin.', { status: 403 });
+	if (origin && origin !== Astro.url.origin) {
+		return new Response('Invalid request origin.', { status: 403 });
+	}
 	try {
 		return Astro.redirect(`/?server=${await database.accept_share_invite(context.user.id, token)}`, 303);
 	} catch (error) {

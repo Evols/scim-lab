@@ -28,8 +28,9 @@ async function find_group(server_id: string, group_id: string) {
       and(eq(scim_groups.server_id, server_id), eq(scim_groups.id, group_id)),
     )
     .limit(1);
-  if (!rows[0])
+  if (!rows[0]) {
     throw new ScimServiceError("group_not_found", "Group not found.");
+  }
   return rows[0];
 }
 
@@ -54,30 +55,33 @@ async function replace_group_members(
           inArray(scim_users.id, user_ids),
         ),
       );
-    if (valid_users.length !== user_ids.length)
+    if (valid_users.length !== user_ids.length) {
       throw new ScimServiceError(
         "group_members_invalid",
         "One or more group members do not exist on this server.",
       );
+    }
   }
   await db.transaction(async (transaction) => {
     await transaction
       .delete(scim_group_members)
       .where(eq(scim_group_members.group_id, group_id));
-    if (user_ids.length)
+    if (user_ids.length) {
       await transaction
         .insert(scim_group_members)
         .values(user_ids.map((user_id) => ({ group_id, user_id })));
+    }
   });
 }
 
 function parse_group_members(value: unknown): GroupMember[] {
   const result = GroupMemberSchema.array().safeParse(value);
-  if (!result.success)
+  if (!result.success) {
     throw new ScimServiceError(
       "group_members_invalid",
       "Group members must be an array of member objects.",
     );
+  }
   return result.data;
 }
 
@@ -124,11 +128,12 @@ export async function create_group(
   origin: string,
 ): Promise<GroupResource> {
   const display_name = String(input.displayName ?? "").trim();
-  if (!display_name)
+  if (!display_name) {
     throw new ScimServiceError(
       "group_display_name_required",
       "displayName is required.",
     );
+  }
 
   const [created] = await db
     .insert(scim_groups)
@@ -163,11 +168,12 @@ export async function replace_group(
 ): Promise<GroupResource> {
   const existing = await find_group(server_id, group_id);
   const display_name = String(input.displayName ?? "").trim();
-  if (!display_name)
+  if (!display_name) {
     throw new ScimServiceError(
       "group_display_name_required",
       "displayName is required.",
     );
+  }
   await replace_group_members(server_id, existing.id, input.members ?? []);
   const [updated] = await db
     .update(scim_groups)
@@ -196,38 +202,47 @@ export async function patch_group(
   for (const operation of operations) {
     const op = operation.op.toLowerCase();
     const path = operation.path || "";
-    if (!["add", "replace", "remove"].includes(op))
+    if (!["add", "replace", "remove"].includes(op)) {
       throw new ScimServiceError(
         "patch_operation_unsupported",
         "Unsupported PATCH operation.",
       );
+    }
     if (!path && operation.value && typeof operation.value === "object") {
       const value = operation.value as DynamicObject;
-      if (value.displayName !== undefined)
+      if (value.displayName !== undefined) {
         display_name = String(value.displayName);
-      if (value.externalId !== undefined)
+      }
+      if (value.externalId !== undefined) {
         external_id = value.externalId ? String(value.externalId) : null;
-      if (value.members !== undefined)
+      }
+      if (value.members !== undefined) {
         members = parse_group_members(value.members);
-    } else if (/^displayname$/i.test(path))
+      }
+    } else if (/^displayname$/i.test(path)) {
       display_name = op === "remove" ? "" : String(operation.value ?? "");
-    else if (/^externalid$/i.test(path))
+    } else if (/^externalid$/i.test(path)) {
       external_id = op === "remove" ? null : String(operation.value ?? "");
-    else if (/^members$/i.test(path)) {
-      if (op === "remove") members = [];
-      else {
+    } else if (/^members$/i.test(path)) {
+      if (op === "remove") {
+        members = [];
+      } else {
         const values = parse_group_members(
           Array.isArray(operation.value) ? operation.value : [operation.value],
         );
-        if (op === "replace") members = values;
-        if (op === "add") members = [...members, ...values];
+        if (op === "replace") {
+          members = values;
+        }
+        if (op === "add") {
+          members = [...members, ...values];
+        }
       }
     } else {
       // SCIM clients commonly remove a single member with a value filter.
       const member_filter = path.match(/^members\[value\s+eq\s+"([^"]+)"\]$/i);
-      if (member_filter && op === "remove")
+      if (member_filter && op === "remove") {
         members = members.filter((member) => member.value !== member_filter[1]);
-      else
+      } else
         throw new ScimServiceError(
           "group_patch_path_unsupported",
           "Unsupported Group PATCH path.",
@@ -235,11 +250,12 @@ export async function patch_group(
     }
   }
 
-  if (!display_name.trim())
+  if (!display_name.trim()) {
     throw new ScimServiceError(
       "group_patch_removes_display_name",
       "PATCH cannot remove displayName.",
     );
+  }
   await replace_group_members(server_id, existing.id, members);
   const [updated] = await db
     .update(scim_groups)
