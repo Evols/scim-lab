@@ -14,7 +14,9 @@ export async function handle_scim_request(
   path: string | undefined,
 ): Promise<Response> {
   const started_at = Date.now();
-  const body = ["POST", "PUT", "PATCH"].includes(request.method)
+  // Keep the original body for event logging; parsed Zod objects may omit
+  // unknown fields from nested structures.
+  const raw_body = ["POST", "PUT", "PATCH"].includes(request.method)
     ? await request.text()
     : "";
   const rows = await db
@@ -74,7 +76,7 @@ export async function handle_scim_request(
           server,
           url.origin,
           url,
-          body,
+          raw_body,
         );
       } else if (resource === "Groups") {
         response = await handle_groups(
@@ -83,7 +85,7 @@ export async function handle_scim_request(
           server,
           url.origin,
           url,
-          body,
+          raw_body,
         );
       } else if (request.method !== "GET") {
         response = scim_error(405, "Method not allowed.");
@@ -101,7 +103,7 @@ export async function handle_scim_request(
     server.id,
     request,
     response,
-    body,
+    raw_body,
     started_at,
     auth.mode,
     auth.success,

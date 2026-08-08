@@ -54,6 +54,21 @@ describe("SCIM request structure validation", () => {
     }
   });
 
+  it("drops unknown fields from known nested core attributes", () => {
+    const result = validate_json_body(
+      JSON.stringify({
+        userName: "ada@example.com",
+        name: { givenName: "Ada", vendorField: "not a core sub-attribute" },
+      }),
+      UserWriteSchema,
+    );
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.name).toEqual({ givenName: "Ada" });
+    }
+  });
+
   it("requires group members to have a string value", async () => {
     const result = validate_json_body(
       JSON.stringify({ members: [{ display: "Ada" }] }),
