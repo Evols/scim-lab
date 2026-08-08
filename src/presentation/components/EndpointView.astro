@@ -1,12 +1,12 @@
 ---
 import type { scim_server_record } from '../../db/schema.ts';
-import type { server_credential } from '../../db';
+import type { ServerCredential } from '../../db';
 
 interface Props {
 	server: scim_server_record;
 	origin: string;
 	is_anonymous: boolean;
-	anonymous_credential?: server_credential | null;
+	anonymous_credential?: ServerCredential | null;
 }
 
 const { server, origin, is_anonymous, anonymous_credential = null } = Astro.props;

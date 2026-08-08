@@ -3,7 +3,7 @@ import {
   find_console_session,
   purge_expired_records,
   take_flash,
-  type console_context,
+  type ConsoleContext,
 } from "../db";
 import { app_config } from "./config";
 
@@ -32,7 +32,7 @@ export function session_cookie_options(max_age = 30 * 86_400) {
 
 export async function get_console_context(
   cookies: cookie_store,
-): Promise<console_context> {
+): Promise<ConsoleContext> {
   await purge_expired_records();
   const raw_token = cookies.get(session_cookie_name)?.value;
   if (raw_token) {

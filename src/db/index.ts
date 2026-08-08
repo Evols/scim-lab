@@ -41,25 +41,25 @@ import {
 const query_client = postgres(app_config.database_url, { max: 10 });
 export const db = drizzle({ client: query_client });
 
-export interface console_context {
+export interface ConsoleContext {
   user: console_user_record;
   session_token?: string;
   fresh_server?: scim_server_record;
 }
 
-export interface server_credential {
+export interface ServerCredential {
   auth_mode: "bearer" | "basic";
   username: string | null;
   credential: string;
 }
 
-export type server_lifecycle = "active" | "deactivated" | "expired";
+export type ServerLifecycle = "active" | "deactivated" | "expired";
 
 export function get_server_lifecycle(
   server: scim_server_record,
   is_anonymous: boolean,
   now = new Date(),
-): server_lifecycle {
+): ServerLifecycle {
   const inactive_ms = now.getTime() - server.last_console_access_at.getTime();
   const active_window_ms = (is_anonymous ? 7 : 30) * 86_400_000;
   const deactivated_at =
@@ -74,7 +74,7 @@ export function get_server_lifecycle(
 
 export async function find_console_session(
   raw_token: string,
-): Promise<console_context | null> {
+): Promise<ConsoleContext | null> {
   const token_hash = hash_secret(raw_token);
   const rows = await db
     .select({ session: console_sessions, user: console_users })
@@ -100,7 +100,7 @@ export async function find_console_session(
   return { user: rows[0].user };
 }
 
-export async function create_anonymous_context(): Promise<console_context> {
+export async function create_anonymous_context(): Promise<ConsoleContext> {
   const session_token = random_secret();
   const bearer_token = generated_bearer_token();
   return db.transaction(async (transaction) => {
@@ -157,14 +157,12 @@ export async function create_flash(
   payload: Record<string, unknown>,
 ): Promise<string> {
   const token = random_secret();
-  await db
-    .insert(console_flashes)
-    .values({
-      token_hash: hash_secret(token),
-      user_id,
-      payload,
-      expires_at: new Date(Date.now() + 5 * 60_000),
-    });
+  await db.insert(console_flashes).values({
+    token_hash: hash_secret(token),
+    user_id,
+    payload,
+    expires_at: new Date(Date.now() + 5 * 60_000),
+  });
   return token;
 }
 
@@ -309,7 +307,7 @@ export async function create_server(user_id: string, name: string) {
 export async function read_server_credential(
   user_id: string,
   server_id: string,
-): Promise<server_credential> {
+): Promise<ServerCredential> {
   const access = await get_server_for_user(user_id, server_id);
   if (!access) throw new Error("Server not found.");
   if (access.server.auth_mode === "basic") {
