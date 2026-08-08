@@ -10,7 +10,7 @@ const error_schema = 'urn:ietf:params:scim:api:messages:2.0:Error';
 const list_schema = 'urn:ietf:params:scim:api:messages:2.0:ListResponse';
 const max_body_bytes = 65_536;
 
-type json_object = Record<string, unknown>;
+type JsonObject = Record<string, unknown>;
 
 function json_response(value: unknown, status = 200, headers: Record<string, string> = {}): Response {
 	return new Response(JSON.stringify(value), { status, headers: { 'content-type': scim_content_type, ...headers } });
@@ -28,12 +28,12 @@ function base_url(origin: string, server_id: string): string {
 	return `${origin}/scim/${server_id}/v2`;
 }
 
-function clean_user_payload(input: json_object): json_object {
+function clean_user_payload(input: JsonObject): JsonObject {
 	const allowed = ['name', 'nickName', 'profileUrl', 'title', 'userType', 'preferredLanguage', 'locale', 'timezone', 'emails', 'phoneNumbers', 'ims', 'photos', 'addresses', 'entitlements', 'roles', 'x509Certificates'];
 	return Object.fromEntries(allowed.filter((key) => input[key] !== undefined).map((key) => [key, input[key]]));
 }
 
-async function user_resource(row: scim_user_record, origin: string): Promise<json_object> {
+async function user_resource(row: scim_user_record, origin: string): Promise<JsonObject> {
 	const membership_rows = await db
 		.select({ group: scim_groups })
 		.from(scim_group_members)
@@ -58,7 +58,7 @@ async function user_resource(row: scim_user_record, origin: string): Promise<jso
 	};
 }
 
-async function group_resource(row: scim_group_record, origin: string): Promise<json_object> {
+async function group_resource(row: scim_group_record, origin: string): Promise<JsonObject> {
 	const members = await db
 		.select({ user: scim_users })
 		.from(scim_group_members)
@@ -80,7 +80,7 @@ async function group_resource(row: scim_group_record, origin: string): Promise<j
 	};
 }
 
-function read_attribute(resource: json_object, attribute: string): unknown {
+function read_attribute(resource: JsonObject, attribute: string): unknown {
 	const parts = attribute.split('.');
 	const visit = (current: unknown, remaining: string[]): unknown => {
 		if (Array.isArray(current)) return current.flatMap((entry) => {
@@ -89,7 +89,7 @@ function read_attribute(resource: json_object, attribute: string): unknown {
 		}).filter((value) => value !== undefined);
 		if (!remaining.length) return current;
 		if (!current || typeof current !== 'object') return undefined;
-		const record = current as json_object;
+		const record = current as JsonObject;
 		const part = remaining[0]!;
 		const key = Object.keys(record).find((candidate) => candidate.toLowerCase() === part.toLowerCase());
 		return key ? visit(record[key], remaining.slice(1)) : undefined;
@@ -128,7 +128,7 @@ function compare_filter(actual: unknown, operator: string, expected?: string): b
 	});
 }
 
-export function matches_filter(resource: json_object, raw_filter: string): boolean {
+export function matches_filter(resource: JsonObject, raw_filter: string): boolean {
 	let filter = raw_filter.trim();
 	if (filter.startsWith('(') && filter.endsWith(')')) filter = filter.slice(1, -1).trim();
 	const or_parts = split_logical(filter, 'or');
@@ -142,7 +142,7 @@ export function matches_filter(resource: json_object, raw_filter: string): boole
 	return compare_filter(read_attribute(resource, attribute!), operator!.toLowerCase(), quoted ?? literal);
 }
 
-export function paginate(resources: json_object[], url: URL): json_object {
+export function paginate(resources: JsonObject[], url: URL): JsonObject {
 	const parsed_start = Number.parseInt(url.searchParams.get('startIndex') ?? '1', 10);
 	const parsed_count = Number.parseInt(url.searchParams.get('count') ?? '100', 10);
 	const start_index = Number.isFinite(parsed_start) ? Math.max(1, parsed_start) : 1;
@@ -157,16 +157,16 @@ export function paginate(resources: json_object[], url: URL): json_object {
 	};
 }
 
-function parse_json_body(body: string): json_object {
+function parse_json_body(body: string): JsonObject {
 	if (!body) throw new Error('A JSON request body is required.');
 	const parsed = JSON.parse(body) as unknown;
 	if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('The request body must be a JSON object.');
-	return parsed as json_object;
+	return parsed as JsonObject;
 }
 
 async function replace_group_members(server_id: string, group_id: string, members: unknown): Promise<void> {
 	if (!Array.isArray(members)) throw new Error('Group members must be an array.');
-	const user_ids = [...new Set(members.map((member) => String((member as json_object)?.value ?? '')).filter(Boolean))];
+	const user_ids = [...new Set(members.map((member) => String((member as JsonObject)?.value ?? '')).filter(Boolean))];
 	if (user_ids.length) {
 		const valid_users = await db.select({ id: scim_users.id }).from(scim_users).where(and(eq(scim_users.server_id, server_id), inArray(scim_users.id, user_ids)));
 		if (valid_users.length !== user_ids.length) throw new Error('One or more group members do not exist on this server.');
@@ -177,15 +177,15 @@ async function replace_group_members(server_id: string, group_id: string, member
 	});
 }
 
-function merge_patch_value(target: json_object, path: string | undefined, value: unknown, operation: string): json_object {
-	if (!path && value && typeof value === 'object' && !Array.isArray(value)) return operation === 'remove' ? target : { ...target, ...(value as json_object) };
+function merge_patch_value(target: JsonObject, path: string | undefined, value: unknown, operation: string): JsonObject {
+	if (!path && value && typeof value === 'object' && !Array.isArray(value)) return operation === 'remove' ? target : { ...target, ...(value as JsonObject) };
 	if (!path) throw new Error('PATCH operation requires a path or object value.');
 	const parts = path.split('.');
 	let current = target;
 	for (const part of parts.slice(0, -1)) {
 		const key = Object.keys(current).find((candidate) => candidate.toLowerCase() === part.toLowerCase()) ?? part;
 		if (!current[key] || typeof current[key] !== 'object' || Array.isArray(current[key])) current[key] = {};
-		current = current[key] as json_object;
+		current = current[key] as JsonObject;
 	}
 	const last_part = parts.at(-1)!;
 	const key = Object.keys(current).find((candidate) => candidate.toLowerCase() === last_part.toLowerCase()) ?? last_part;
@@ -210,7 +210,7 @@ async function handle_users(method: string, resource_id: string | undefined, ser
 		return json_response(paginate(resources, url));
 	}
 	if (method === 'POST' && !resource_id) {
-		let input: json_object;
+		let input: JsonObject;
 		try { input = parse_json_body(body); } catch { return scim_error(400, 'A valid JSON object is required.', 'invalidSyntax'); }
 		const user_name = String(input.userName ?? '').trim();
 		if (!user_name) return scim_error(400, 'userName is required.', 'invalidValue');
@@ -243,7 +243,7 @@ async function handle_users(method: string, resource_id: string | undefined, ser
 		return new Response(null, { status: 204 });
 	}
 	if (method === 'PUT') {
-		let input: json_object;
+		let input: JsonObject;
 		try { input = parse_json_body(body); } catch { return scim_error(400, 'A valid JSON object is required.', 'invalidSyntax'); }
 		const user_name = String(input.userName ?? '').trim();
 		if (!user_name) return scim_error(400, 'userName is required.', 'invalidValue');
@@ -256,12 +256,12 @@ async function handle_users(method: string, resource_id: string | undefined, ser
 		}
 	}
 	if (method === 'PATCH') {
-		let input: json_object;
+		let input: JsonObject;
 		try { input = parse_json_body(body); } catch { return scim_error(400, 'A valid JSON object is required.', 'invalidSyntax'); }
 		if (!Array.isArray(input.Operations)) return scim_error(400, 'PATCH Operations must be an array.', 'invalidValue');
 		let resource = await user_resource(existing, origin);
 		for (const raw_operation of input.Operations) {
-			const operation = raw_operation as json_object;
+			const operation = raw_operation as JsonObject;
 			const op = String(operation.op ?? '').toLowerCase();
 			if (!['add', 'replace', 'remove'].includes(op)) return scim_error(400, 'Unsupported PATCH operation.', 'invalidValue');
 			resource = merge_patch_value(resource, operation.path ? String(operation.path) : undefined, operation.value, op);
@@ -290,7 +290,7 @@ async function handle_groups(method: string, resource_id: string | undefined, se
 		return json_response(paginate(resources, url));
 	}
 	if (method === 'POST' && !resource_id) {
-		let input: json_object;
+		let input: JsonObject;
 		try { input = parse_json_body(body); } catch { return scim_error(400, 'A valid JSON object is required.', 'invalidSyntax'); }
 		const display_name = String(input.displayName ?? '').trim();
 		if (!display_name) return scim_error(400, 'displayName is required.', 'invalidValue');
@@ -308,7 +308,7 @@ async function handle_groups(method: string, resource_id: string | undefined, se
 		return new Response(null, { status: 204 });
 	}
 	if (method === 'PUT') {
-		let input: json_object;
+		let input: JsonObject;
 		try { input = parse_json_body(body); } catch { return scim_error(400, 'A valid JSON object is required.', 'invalidSyntax'); }
 		const display_name = String(input.displayName ?? '').trim();
 		if (!display_name) return scim_error(400, 'displayName is required.', 'invalidValue');
@@ -318,19 +318,19 @@ async function handle_groups(method: string, resource_id: string | undefined, se
 		return json_response(await group_resource(updated!, origin));
 	}
 	if (method === 'PATCH') {
-		let input: json_object;
+		let input: JsonObject;
 		try { input = parse_json_body(body); } catch { return scim_error(400, 'A valid JSON object is required.', 'invalidSyntax'); }
 		if (!Array.isArray(input.Operations)) return scim_error(400, 'PATCH Operations must be an array.', 'invalidValue');
 		let display_name = existing.display_name;
 		let external_id = existing.external_id;
 		let members = (await group_resource(existing, origin)).members as unknown[];
 		for (const raw_operation of input.Operations) {
-			const operation = raw_operation as json_object;
+			const operation = raw_operation as JsonObject;
 			const op = String(operation.op ?? '').toLowerCase();
 			const path = operation.path ? String(operation.path) : '';
 			if (!['add', 'replace', 'remove'].includes(op)) return scim_error(400, 'Unsupported PATCH operation.', 'invalidValue');
 			if (!path && operation.value && typeof operation.value === 'object') {
-				const value = operation.value as json_object;
+				const value = operation.value as JsonObject;
 				if (value.displayName !== undefined) display_name = String(value.displayName);
 				if (value.externalId !== undefined) external_id = value.externalId ? String(value.externalId) : null;
 				if (value.members !== undefined) members = value.members as unknown[];
@@ -343,7 +343,7 @@ async function handle_groups(method: string, resource_id: string | undefined, se
 				if (op === 'remove') members = [];
 			} else {
 				const member_filter = path.match(/^members\[value\s+eq\s+"([^"]+)"\]$/i);
-				if (member_filter && op === 'remove') members = members.filter((member) => String((member as json_object).value) !== member_filter[1]);
+				if (member_filter && op === 'remove') members = members.filter((member) => String((member as JsonObject).value) !== member_filter[1]);
 				else return scim_error(400, 'Unsupported Group PATCH path.', 'invalidPath');
 			}
 		}
@@ -356,7 +356,7 @@ async function handle_groups(method: string, resource_id: string | undefined, se
 	return scim_error(405, 'Method not allowed.');
 }
 
-function service_provider_config(server: scim_server_record): json_object {
+function service_provider_config(server: scim_server_record): JsonObject {
 	return {
 		schemas: ['urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig'],
 		documentationUri: 'https://www.rfc-editor.org/rfc/rfc7644',
@@ -372,7 +372,7 @@ function service_provider_config(server: scim_server_record): json_object {
 	};
 }
 
-const schema_documents: json_object[] = [
+const schema_documents: JsonObject[] = [
 	{ schemas: ['urn:ietf:params:scim:schemas:core:2.0:Schema'], id: user_schema, name: 'User', description: 'SCIM core User', attributes: [
 		{ name: 'userName', type: 'string', multiValued: false, required: true, caseExact: false, mutability: 'readWrite', returned: 'default', uniqueness: 'server' },
 		{ name: 'name', type: 'complex', multiValued: false, required: false, mutability: 'readWrite', returned: 'default', subAttributes: ['formatted', 'familyName', 'givenName', 'middleName', 'honorificPrefix', 'honorificSuffix'].map((name) => ({ name, type: 'string', multiValued: false, required: false, caseExact: false, mutability: 'readWrite', returned: 'default', uniqueness: 'none' })) },
@@ -390,7 +390,7 @@ const schema_documents: json_object[] = [
 	] },
 ];
 
-const resource_types: json_object[] = [
+const resource_types: JsonObject[] = [
 	{ schemas: ['urn:ietf:params:scim:schemas:core:2.0:ResourceType'], id: 'User', name: 'User', endpoint: '/Users', schema: user_schema },
 	{ schemas: ['urn:ietf:params:scim:schemas:core:2.0:ResourceType'], id: 'Group', name: 'Group', endpoint: '/Groups', schema: group_schema },
 ];
@@ -428,7 +428,7 @@ function redact_body(value: string): string {
 		const visit = (input: unknown): unknown => {
 			if (Array.isArray(input)) return input.map(visit);
 			if (!input || typeof input !== 'object') return input;
-			return Object.fromEntries(Object.entries(input as json_object).map(([key, entry]) => [
+			return Object.fromEntries(Object.entries(input as JsonObject).map(([key, entry]) => [
 				key,
 				/(password|token|secret|authorization)/i.test(key) ? '[REDACTED]' : visit(entry),
 			]));
