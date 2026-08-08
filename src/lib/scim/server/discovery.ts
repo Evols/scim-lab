@@ -1,15 +1,8 @@
 import type { ScimServerRecord } from "../../../db/schema.ts";
 import { GROUP_SCHEMA, USER_SCHEMA } from "./constants.ts";
-import {
-  ResourceType,
-  SchemaDocument,
-  ServiceProviderConfigSchema,
-  type ServiceProviderConfig,
-} from "../schemas.ts";
+import { ResourceType, SchemaDocument, ServiceProviderConfigSchema, type ServiceProviderConfig } from "../schemas.ts";
 
-export function service_provider_config(
-  server: ScimServerRecord,
-): ServiceProviderConfig {
+export function service_provider_config(server: ScimServerRecord): ServiceProviderConfig {
   return ServiceProviderConfigSchema.parse({
     schemas: ["urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig"],
     documentationUri: "https://www.rfc-editor.org/rfc/rfc7644",
@@ -64,23 +57,18 @@ export const schema_documents = SchemaDocument.array().parse([
         required: false,
         mutability: "readWrite",
         returned: "default",
-        subAttributes: [
-          "formatted",
-          "familyName",
-          "givenName",
-          "middleName",
-          "honorificPrefix",
-          "honorificSuffix",
-        ].map((name) => ({
-          name,
-          type: "string",
-          multiValued: false,
-          required: false,
-          caseExact: false,
-          mutability: "readWrite",
-          returned: "default",
-          uniqueness: "none",
-        })),
+        subAttributes: ["formatted", "familyName", "givenName", "middleName", "honorificPrefix", "honorificSuffix"].map(
+          (name) => ({
+            name,
+            type: "string",
+            multiValued: false,
+            required: false,
+            caseExact: false,
+            mutability: "readWrite",
+            returned: "default",
+            uniqueness: "none",
+          }),
+        ),
       },
       {
         name: "displayName",
@@ -92,15 +80,7 @@ export const schema_documents = SchemaDocument.array().parse([
         returned: "default",
         uniqueness: "none",
       },
-      ...[
-        "nickName",
-        "profileUrl",
-        "title",
-        "userType",
-        "preferredLanguage",
-        "locale",
-        "timezone",
-      ].map((name) => ({
+      ...["nickName", "profileUrl", "title", "userType", "preferredLanguage", "locale", "timezone"].map((name) => ({
         name,
         type: "string",
         multiValued: false,
@@ -128,16 +108,14 @@ export const schema_documents = SchemaDocument.array().parse([
         returned: "never",
         uniqueness: "none",
       },
-      ...["emails", "phoneNumbers", "ims", "photos", "addresses"].map(
-        (name) => ({
-          name,
-          type: "complex",
-          multiValued: true,
-          required: false,
-          mutability: "readWrite",
-          returned: "default",
-        }),
-      ),
+      ...["emails", "phoneNumbers", "ims", "photos", "addresses"].map((name) => ({
+        name,
+        type: "complex",
+        multiValued: true,
+        required: false,
+        mutability: "readWrite",
+        returned: "default",
+      })),
       ...["entitlements", "roles", "x509Certificates"].map((name) => ({
         name,
         type: "complex",

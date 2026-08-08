@@ -9,11 +9,7 @@ import {
   revoke_share_invite,
   rotate_server_auth,
 } from "../../db";
-import {
-  flash_cookie_name,
-  get_console_context,
-  session_cookie_options,
-} from "../../lib/console_context";
+import { flash_cookie_name, get_console_context, session_cookie_options } from "../../lib/console_context";
 
 export const prerender = false;
 
@@ -37,18 +33,11 @@ export const POST: APIRoute = async ({ cookies, redirect, request, url }) => {
       if (context.user.is_anonymous) {
         throw new Error("Sign in before creating another server.");
       }
-      const result = await create_server(
-        context.user.id,
-        String(form.get("name") ?? "").trim(),
-      );
+      const result = await create_server(context.user.id, String(form.get("name") ?? "").trim());
       redirect_to = `/?server=${result.server.id}`;
       flash = { type: "success", message: "Your SCIM server is ready." };
     } else if (intent === "rename_server") {
-      await rename_server(
-        context.user.id,
-        server_id,
-        String(form.get("name") ?? "").trim(),
-      );
+      await rename_server(context.user.id, server_id, String(form.get("name") ?? "").trim());
       flash = { type: "success", message: "Server name updated." };
     } else if (intent === "rotate_auth") {
       const auth_mode = form.get("auth_mode") === "basic" ? "basic" : "bearer";
@@ -72,11 +61,7 @@ export const POST: APIRoute = async ({ cookies, redirect, request, url }) => {
         invite_url: `${url.origin}/invite/${token}`,
       };
     } else if (intent === "revoke_invite") {
-      await revoke_share_invite(
-        context.user.id,
-        server_id,
-        String(form.get("token_hash") ?? ""),
-      );
+      await revoke_share_invite(context.user.id, server_id, String(form.get("token_hash") ?? ""));
       flash = { type: "success", message: "Sharing link revoked." };
     } else if (intent === "delete_server") {
       await delete_server(context.user.id, server_id);
@@ -86,10 +71,7 @@ export const POST: APIRoute = async ({ cookies, redirect, request, url }) => {
   } catch (error) {
     flash = {
       type: "error",
-      message:
-        error instanceof Error
-          ? error.message
-          : "The action could not be completed.",
+      message: error instanceof Error ? error.message : "The action could not be completed.",
     };
   }
   if (flash) {

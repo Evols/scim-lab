@@ -1,10 +1,6 @@
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { db } from "../../../db";
-import {
-  scim_group_members,
-  scim_groups,
-  scim_users,
-} from "../../../db/schema.ts";
+import { scim_group_members, scim_groups, scim_users } from "../../../db/schema.ts";
 import { matches_filter } from "./filter.ts";
 import { paginate, type ListQuery } from "./pagination.ts";
 import {
@@ -24,9 +20,7 @@ async function find_group(server_id: string, group_id: string) {
   const rows = await db
     .select()
     .from(scim_groups)
-    .where(
-      and(eq(scim_groups.server_id, server_id), eq(scim_groups.id, group_id)),
-    )
+    .where(and(eq(scim_groups.server_id, server_id), eq(scim_groups.id, group_id)))
     .limit(1);
   if (!rows[0]) {
     throw new ScimServiceError("group_not_found", "Group not found.");
@@ -34,14 +28,8 @@ async function find_group(server_id: string, group_id: string) {
   return rows[0];
 }
 
-async function replace_group_members(
-  server_id: string,
-  group_id: string,
-  members: GroupMember[],
-): Promise<void> {
-  const user_ids = [
-    ...new Set(members.map((member) => member.value).filter(Boolean)),
-  ];
+async function replace_group_members(server_id: string, group_id: string, members: GroupMember[]): Promise<void> {
+  const user_ids = [...new Set(members.map((member) => member.value).filter(Boolean))];
 
   // Validate the complete replacement before deleting current memberships.
   // This also prevents a group from referencing users on another SCIM server.
@@ -49,27 +37,15 @@ async function replace_group_members(
     const valid_users = await db
       .select({ id: scim_users.id })
       .from(scim_users)
-      .where(
-        and(
-          eq(scim_users.server_id, server_id),
-          inArray(scim_users.id, user_ids),
-        ),
-      );
+      .where(and(eq(scim_users.server_id, server_id), inArray(scim_users.id, user_ids)));
     if (valid_users.length !== user_ids.length) {
-      throw new ScimServiceError(
-        "group_members_invalid",
-        "One or more group members do not exist on this server.",
-      );
+      throw new ScimServiceError("group_members_invalid", "One or more group members do not exist on this server.");
     }
   }
   await db.transaction(async (transaction) => {
-    await transaction
-      .delete(scim_group_members)
-      .where(eq(scim_group_members.group_id, group_id));
+    await transaction.delete(scim_group_members).where(eq(scim_group_members.group_id, group_id));
     if (user_ids.length) {
-      await transaction
-        .insert(scim_group_members)
-        .values(user_ids.map((user_id) => ({ group_id, user_id })));
+      await transaction.insert(scim_group_members).values(user_ids.map((user_id) => ({ group_id, user_id })));
     }
   });
 }
@@ -77,62 +53,37 @@ async function replace_group_members(
 function parse_group_members(value: unknown): GroupMember[] {
   const result = GroupMemberSchema.array().safeParse(value);
   if (!result.success) {
-    throw new ScimServiceError(
-      "group_members_invalid",
-      "Group members must be an array of member objects.",
-    );
+    throw new ScimServiceError("group_members_invalid", "Group members must be an array of member objects.");
   }
   return result.data;
 }
 
-export async function list_groups(
-  server_id: string,
-  origin: string,
-  query: ListQuery,
-): Promise<GroupListResponse> {
+export async function list_groups(server_id: string, origin: string, query: ListQuery): Promise<GroupListResponse> {
   const rows = await db
     .select()
     .from(scim_groups)
     .where(eq(scim_groups.server_id, server_id))
     .orderBy(asc(scim_groups.created_at));
-  let resources = await Promise.all(
-    rows.map((row) => group_resource(row, origin)),
-  );
+  let resources = await Promise.all(rows.map((row) => group_resource(row, origin)));
   if (query.filter) {
     const filter = query.filter;
     try {
-      resources = resources.filter((resource) =>
-        matches_filter(resource, filter),
-      );
+      resources = resources.filter((resource) => matches_filter(resource, filter));
     } catch {
-      throw new ScimServiceError(
-        "filter_invalid",
-        "The supplied filter is invalid or unsupported.",
-      );
+      throw new ScimServiceError("filter_invalid", "The supplied filter is invalid or unsupported.");
     }
   }
   return paginate(resources, query);
 }
 
-export async function get_group(
-  server_id: string,
-  group_id: string,
-  origin: string,
-): Promise<GroupResource> {
+export async function get_group(server_id: string, group_id: string, origin: string): Promise<GroupResource> {
   return group_resource(await find_group(server_id, group_id), origin);
 }
 
-export async function create_group(
-  server_id: string,
-  input: GroupWriteInput,
-  origin: string,
-): Promise<GroupResource> {
+export async function create_group(server_id: string, input: GroupWriteInput, origin: string): Promise<GroupResource> {
   const display_name = String(input.displayName ?? "").trim();
   if (!display_name) {
-    throw new ScimServiceError(
-      "group_display_name_required",
-      "displayName is required.",
-    );
+    throw new ScimServiceError("group_display_name_required", "displayName is required.");
   }
 
   const [created] = await db
@@ -152,10 +103,7 @@ export async function create_group(
   return group_resource(created!, origin);
 }
 
-export async function delete_group(
-  server_id: string,
-  group_id: string,
-): Promise<void> {
+export async function delete_group(server_id: string, group_id: string): Promise<void> {
   const existing = await find_group(server_id, group_id);
   await db.delete(scim_groups).where(eq(scim_groups.id, existing.id));
 }
@@ -169,10 +117,7 @@ export async function replace_group(
   const existing = await find_group(server_id, group_id);
   const display_name = String(input.displayName ?? "").trim();
   if (!display_name) {
-    throw new ScimServiceError(
-      "group_display_name_required",
-      "displayName is required.",
-    );
+    throw new ScimServiceError("group_display_name_required", "displayName is required.");
   }
   await replace_group_members(server_id, existing.id, input.members ?? []);
   const [updated] = await db
@@ -203,10 +148,7 @@ export async function patch_group(
     const op = operation.op.toLowerCase();
     const path = operation.path || "";
     if (!["add", "replace", "remove"].includes(op)) {
-      throw new ScimServiceError(
-        "patch_operation_unsupported",
-        "Unsupported PATCH operation.",
-      );
+      throw new ScimServiceError("patch_operation_unsupported", "Unsupported PATCH operation.");
     }
     if (!path && operation.value && typeof operation.value === "object") {
       const value = operation.value as DynamicObject;
@@ -227,9 +169,7 @@ export async function patch_group(
       if (op === "remove") {
         members = [];
       } else {
-        const values = parse_group_members(
-          Array.isArray(operation.value) ? operation.value : [operation.value],
-        );
+        const values = parse_group_members(Array.isArray(operation.value) ? operation.value : [operation.value]);
         if (op === "replace") {
           members = values;
         }
@@ -242,19 +182,12 @@ export async function patch_group(
       const member_filter = path.match(/^members\[value\s+eq\s+"([^"]+)"\]$/i);
       if (member_filter && op === "remove") {
         members = members.filter((member) => member.value !== member_filter[1]);
-      } else
-        throw new ScimServiceError(
-          "group_patch_path_unsupported",
-          "Unsupported Group PATCH path.",
-        );
+      } else throw new ScimServiceError("group_patch_path_unsupported", "Unsupported Group PATCH path.");
     }
   }
 
   if (!display_name.trim()) {
-    throw new ScimServiceError(
-      "group_patch_removes_display_name",
-      "PATCH cannot remove displayName.",
-    );
+    throw new ScimServiceError("group_patch_removes_display_name", "PATCH cannot remove displayName.");
   }
   await replace_group_members(server_id, existing.id, members);
   const [updated] = await db

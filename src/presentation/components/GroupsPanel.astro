@@ -1,12 +1,65 @@
 ---
-interface GroupRow { id: string; display_name: string; external_id: string | null; member_count: number; updated_at: Date }
-interface Props { groups: GroupRow[] }
+interface GroupRow {
+  id: string;
+  display_name: string;
+  external_id: string | null;
+  member_count: number;
+  updated_at: Date;
+}
+interface Props {
+  groups: GroupRow[];
+}
 const { groups } = Astro.props;
 ---
 
 <div>
-	<div class="flex items-end justify-between"><div><h1 class="text-2xl font-semibold tracking-[-0.03em]">Groups</h1><p class="mt-1 text-sm text-[#71717a]">Groups and membership provisioned through SCIM.</p></div><span class="inline-flex h-9 items-center rounded-md border border-[#e4e4e7] bg-white px-3 text-xs font-medium text-[#52525b] shadow-xs">{groups.length}</span></div>
-	<section class="mt-6 overflow-hidden rounded-lg border border-[#e4e4e7] bg-white shadow-xs">
-		{groups.length ? <div class="divide-y divide-[#e4e4e7]">{groups.map((group) => <article class="flex items-center gap-4 px-4 py-3.5 hover:bg-[#fafafa]"><span class="grid size-9 place-items-center rounded-md border border-[#e4e4e7] bg-[#fafafa] text-xs font-medium text-[#71717a]">G</span><div class="min-w-0 flex-1"><p class="truncate text-sm font-medium">{group.display_name}</p><p class="mt-0.5 truncate font-mono text-[11px] text-[#a1a1aa]">{group.external_id ?? group.id}</p></div><span class="rounded-md bg-[#f4f4f5] px-2 py-1 text-xs font-medium text-[#52525b]">{group.member_count} {group.member_count === 1 ? 'member' : 'members'}</span><time class="hidden w-28 text-right text-xs text-[#71717a] sm:block">{group.updated_at.toLocaleDateString('en', { dateStyle: 'medium' })}</time></article>)}</div> : <div class="grid min-h-72 place-items-center px-6 py-12 text-center"><div><span class="mx-auto grid size-10 place-items-center rounded-md border border-[#e4e4e7] bg-[#fafafa] text-[#71717a]">G</span><h2 class="mt-4 text-sm font-semibold">No groups yet</h2><p class="mt-1.5 max-w-sm text-sm leading-6 text-[#71717a]">Provision a group through the SCIM endpoint and it will appear here.</p></div></div>}
-	</section>
+  <div class="flex items-end justify-between">
+    <div>
+      <h1 class="text-2xl font-semibold tracking-[-0.03em]">Groups</h1><p class="mt-1 text-sm text-[#71717a]">
+        Groups and membership provisioned through SCIM.
+      </p>
+    </div><span
+      class="inline-flex h-9 items-center rounded-md border border-[#e4e4e7] bg-white px-3 text-xs font-medium text-[#52525b] shadow-xs"
+      >{groups.length}</span
+    >
+  </div>
+  <section class="mt-6 overflow-hidden rounded-lg border border-[#e4e4e7] bg-white shadow-xs">
+    {
+      groups.length ? (
+        <div class="divide-y divide-[#e4e4e7]">
+          {groups.map((group) => (
+            <article class="flex items-center gap-4 px-4 py-3.5 hover:bg-[#fafafa]">
+              <span class="grid size-9 place-items-center rounded-md border border-[#e4e4e7] bg-[#fafafa] text-xs font-medium text-[#71717a]">
+                G
+              </span>
+              <div class="min-w-0 flex-1">
+                <p class="truncate text-sm font-medium">{group.display_name}</p>
+                <p class="mt-0.5 truncate font-mono text-[11px] text-[#a1a1aa]">{group.external_id ?? group.id}</p>
+              </div>
+              <span class="rounded-md bg-[#f4f4f5] px-2 py-1 text-xs font-medium text-[#52525b]">
+                {group.member_count} {group.member_count === 1 ? "member" : "members"}
+              </span>
+              <time class="hidden w-28 text-right text-xs text-[#71717a] sm:block">
+                {group.updated_at.toLocaleDateString("en", { dateStyle: "medium" })}
+              </time>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <div class="grid min-h-72 place-items-center px-6 py-12 text-center">
+          <div>
+            <>
+              <span class="mx-auto grid size-10 place-items-center rounded-md border border-[#e4e4e7] bg-[#fafafa] text-[#71717a]">
+                G
+              </span>
+              <h2 class="mt-4 text-sm font-semibold">No groups yet</h2>
+              <p class="mt-1.5 max-w-sm text-sm leading-6 text-[#71717a]">
+                Provision a group through the SCIM endpoint and it will appear here.
+              </p>
+            </>
+          </div>
+        </div>
+      )
+    }
+  </section>
 </div>

@@ -1,34 +1,195 @@
 ---
-import type { ScimServerRecord } from '../../db/schema.ts';
+import type { ScimServerRecord } from "../../db/schema.ts";
 
-interface InviteRow { token_hash: string; created_at: Date; expires_at: Date }
-interface Props { server: ScimServerRecord; invites: InviteRow[]; is_anonymous: boolean }
+interface InviteRow {
+  token_hash: string;
+  created_at: Date;
+  expires_at: Date;
+}
+interface Props {
+  server: ScimServerRecord;
+  invites: InviteRow[];
+  is_anonymous: boolean;
+}
 const { server, invites, is_anonymous } = Astro.props;
 const return_to = `/?server=${server.id}&view=settings`;
 ---
 
 <div class="mx-auto max-w-3xl">
-	<div><h1 class="text-2xl font-semibold tracking-[-0.03em]">Settings</h1><p class="mt-1 text-sm text-[#71717a]">Manage this server, its credentials, and access.</p></div>
+  <div>
+    <h1 class="text-2xl font-semibold tracking-[-0.03em]">Settings</h1><p class="mt-1 text-sm text-[#71717a]">
+      Manage this server, its credentials, and access.
+    </p>
+  </div>
 
-	<div class="mt-8 mb-40 space-y-8">
-		<section class="grid gap-5 border-b border-[#e4e4e7] pb-8 sm:grid-cols-[190px_1fr]">
-			<div><h2 class="text-sm font-semibold">General</h2><p class="mt-1 text-sm leading-5 text-[#71717a]">The name shown in your server picker.</p></div>
-			<form class="rounded-lg border border-[#e4e4e7] bg-white p-5 shadow-xs" action="/api/console" method="POST"><input type="hidden" name="intent" value="rename_server"/><input type="hidden" name="server_id" value={server.id}/><input type="hidden" name="return_to" value={return_to}/><label class="text-sm font-medium" for="server-name">Server name</label><input class="mt-2 h-10 w-full rounded-md border border-[#d4d4d8] bg-white px-3 text-sm shadow-xs outline-none focus:ring-2 focus:ring-[#e4e4e7]" id="server-name" name="name" maxlength="80" value={server.name} required/><div class="mt-4 flex justify-end"><button class="h-9 cursor-pointer rounded-md bg-[#18181b] px-4 text-sm font-medium text-white shadow-sm hover:bg-[#27272a]" type="submit">Save</button></div></form>
-		</section>
+  <div class="mt-8 mb-40 space-y-8">
+    <section class="grid gap-5 border-b border-[#e4e4e7] pb-8 sm:grid-cols-[190px_1fr]">
+      <div>
+        <h2 class="text-sm font-semibold">General</h2><p class="mt-1 text-sm leading-5 text-[#71717a]">
+          The name shown in your server picker.
+        </p>
+      </div>
+      <form class="rounded-lg border border-[#e4e4e7] bg-white p-5 shadow-xs" action="/api/console" method="POST">
+        <input type="hidden" name="intent" value="rename_server" /><input
+          type="hidden"
+          name="server_id"
+          value={server.id}
+        /><input type="hidden" name="return_to" value={return_to} /><label class="text-sm font-medium" for="server-name"
+          >Server name</label
+        ><input
+          class="mt-2 h-10 w-full rounded-md border border-[#d4d4d8] bg-white px-3 text-sm shadow-xs outline-none focus:ring-2 focus:ring-[#e4e4e7]"
+          id="server-name"
+          name="name"
+          maxlength="80"
+          value={server.name}
+          required
+        /><div class="mt-4 flex justify-end">
+          <button
+            class="h-9 cursor-pointer rounded-md bg-[#18181b] px-4 text-sm font-medium text-white shadow-sm hover:bg-[#27272a]"
+            type="submit">Save</button
+          >
+        </div>
+      </form>
+    </section>
 
-		<section class="grid gap-5 border-b border-[#e4e4e7] pb-8 sm:grid-cols-[190px_1fr]">
-			<div><h2 class="text-sm font-semibold">Authentication</h2><p class="mt-1 text-sm leading-5 text-[#71717a]">One credential mode is active at a time.</p></div>
-			<div class="rounded-lg border border-[#e4e4e7] bg-white p-5 shadow-xs"><div class="flex items-center justify-between"><div><p class="text-sm font-medium">Current mode</p><p class="mt-1 text-sm text-[#71717a]">Rotated {server.credential_rotated_at.toLocaleDateString('en', { dateStyle: 'medium' })}</p></div><span class="rounded-full border border-[#e4e4e7] bg-[#fafafa] px-2.5 py-1 text-xs font-medium capitalize">{server.auth_mode}</span></div><div class="my-5 h-px bg-[#e4e4e7]"></div><div class="grid gap-2 sm:grid-cols-2">{(['bearer','basic'] as const).map((auth_mode) => <form action="/api/console" method="POST"><input type="hidden" name="intent" value="rotate_auth"/><input type="hidden" name="server_id" value={server.id}/><input type="hidden" name="return_to" value={return_to}/><input type="hidden" name="auth_mode" value={auth_mode}/><button class:list={['w-full cursor-pointer rounded-md border px-3 py-2.5 text-left text-sm font-medium shadow-xs transition', server.auth_mode === auth_mode ? 'border-[#d4d4d8] bg-[#f4f4f5]' : 'border-[#e4e4e7] bg-white hover:bg-[#fafafa]']} type="submit">Generate {auth_mode === 'bearer' ? 'bearer token' : 'basic credentials'}</button></form>)}</div><p class="mt-3 text-xs text-[#a16207]">Generating a credential revokes the previous one immediately.</p></div>
-		</section>
+    <section class="grid gap-5 border-b border-[#e4e4e7] pb-8 sm:grid-cols-[190px_1fr]">
+      <div>
+        <h2 class="text-sm font-semibold">Authentication</h2><p class="mt-1 text-sm leading-5 text-[#71717a]">
+          One credential mode is active at a time.
+        </p>
+      </div>
+      <div class="rounded-lg border border-[#e4e4e7] bg-white p-5 shadow-xs">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm font-medium">Current mode</p><p class="mt-1 text-sm text-[#71717a]">
+              Rotated {server.credential_rotated_at.toLocaleDateString("en", { dateStyle: "medium" })}
+            </p>
+          </div><span
+            class="rounded-full border border-[#e4e4e7] bg-[#fafafa] px-2.5 py-1 text-xs font-medium capitalize"
+            >{server.auth_mode}</span
+          >
+        </div><div class="my-5 h-px bg-[#e4e4e7]"></div><div class="grid gap-2 sm:grid-cols-2">
+          {
+            (["bearer", "basic"] as const).map((auth_mode) => (
+              <form action="/api/console" method="POST">
+                <>
+                  <input type="hidden" name="intent" value="rotate_auth" />
+                  <input type="hidden" name="server_id" value={server.id} />
+                  <input type="hidden" name="return_to" value={return_to} />
+                  <input type="hidden" name="auth_mode" value={auth_mode} />
+                  <button
+                    class:list={[
+                      "w-full cursor-pointer rounded-md border px-3 py-2.5 text-left text-sm font-medium shadow-xs transition",
+                      server.auth_mode === auth_mode
+                        ? "border-[#d4d4d8] bg-[#f4f4f5]"
+                        : "border-[#e4e4e7] bg-white hover:bg-[#fafafa]",
+                    ]}
+                    type="submit"
+                  >
+                    Generate {auth_mode === "bearer" ? "bearer token" : "basic credentials"}
+                  </button>
+                </>
+              </form>
+            ))
+          }
+        </div><p class="mt-3 text-xs text-[#a16207]">Generating a credential revokes the previous one immediately.</p>
+      </div>
+    </section>
 
-		<section class="grid gap-5 border-b border-[#e4e4e7] pb-8 sm:grid-cols-[190px_1fr]">
-			<div><h2 class="text-sm font-semibold">Sharing</h2><p class="mt-1 text-sm leading-5 text-[#71717a]">Reusable co-owner links expire after 30 days.</p></div>
-			<div class="rounded-lg border border-[#e4e4e7] bg-white p-5 shadow-xs"><div class="flex items-center justify-between gap-4"><div><p class="text-sm font-medium">Magic links</p><p class="mt-1 text-sm text-[#71717a]">Anyone signed in with a valid link becomes a co-owner.</p></div>{!is_anonymous && <form action="/api/console" method="POST"><input type="hidden" name="intent" value="create_invite"/><input type="hidden" name="server_id" value={server.id}/><input type="hidden" name="return_to" value={return_to}/><button class="h-9 cursor-pointer rounded-md border border-[#e4e4e7] bg-white px-3 text-sm font-medium shadow-xs hover:bg-[#f4f4f5]" type="submit">Create link</button></form>}</div>{is_anonymous ? <div class="mt-4 rounded-md border border-[#fde68a] bg-[#fffbeb] px-3 py-2.5 text-sm text-[#92400e]">Sign in before sharing this server.</div> : invites.length ? <div class="mt-4 divide-y divide-[#e4e4e7] rounded-md border border-[#e4e4e7]">{invites.map((invite) => <div class="flex items-center gap-3 px-3 py-2.5"><span class="grid size-7 place-items-center rounded-md bg-[#f4f4f5] text-xs">↗</span><div class="min-w-0 flex-1"><p class="font-mono text-xs">{invite.token_hash.slice(0, 10)}…</p><p class="mt-0.5 text-xs text-[#71717a]">Expires {invite.expires_at.toLocaleDateString('en', { dateStyle: 'medium' })}</p></div><form action="/api/console" method="POST"><input type="hidden" name="intent" value="revoke_invite"/><input type="hidden" name="server_id" value={server.id}/><input type="hidden" name="token_hash" value={invite.token_hash}/><input type="hidden" name="return_to" value={return_to}/><button class="cursor-pointer text-xs font-medium text-[#dc2626] hover:underline" type="submit">Revoke</button></form></div>)}</div> : <p class="mt-4 text-sm text-[#71717a]">No active sharing links.</p>}</div>
-		</section>
+    <section class="grid gap-5 border-b border-[#e4e4e7] pb-8 sm:grid-cols-[190px_1fr]">
+      <div>
+        <h2 class="text-sm font-semibold">Sharing</h2><p class="mt-1 text-sm leading-5 text-[#71717a]">
+          Reusable co-owner links expire after 30 days.
+        </p>
+      </div>
+      <div class="rounded-lg border border-[#e4e4e7] bg-white p-5 shadow-xs">
+        <div class="flex items-center justify-between gap-4">
+          <div>
+            <p class="text-sm font-medium">Magic links</p><p class="mt-1 text-sm text-[#71717a]">
+              Anyone signed in with a valid link becomes a co-owner.
+            </p>
+          </div>{
+            !is_anonymous && (
+              <form action="/api/console" method="POST">
+                <>
+                  <input type="hidden" name="intent" value="create_invite" />
+                  <input type="hidden" name="server_id" value={server.id} />
+                  <input type="hidden" name="return_to" value={return_to} />
+                  <button
+                    class="h-9 cursor-pointer rounded-md border border-[#e4e4e7] bg-white px-3 text-sm font-medium shadow-xs hover:bg-[#f4f4f5]"
+                    type="submit"
+                  >
+                    Create link
+                  </button>
+                </>
+              </form>
+            )
+          }
+        </div>{
+          is_anonymous ? (
+            <div class="mt-4 rounded-md border border-[#fde68a] bg-[#fffbeb] px-3 py-2.5 text-sm text-[#92400e]">
+              Sign in before sharing this server.
+            </div>
+          ) : invites.length ? (
+            <div class="mt-4 divide-y divide-[#e4e4e7] rounded-md border border-[#e4e4e7]">
+              {invites.map((invite) => (
+                <div class="flex items-center gap-3 px-3 py-2.5">
+                  <span class="grid size-7 place-items-center rounded-md bg-[#f4f4f5] text-xs">↗</span>
+                  <div class="min-w-0 flex-1">
+                    <p class="font-mono text-xs">{invite.token_hash.slice(0, 10)}…</p>
+                    <p class="mt-0.5 text-xs text-[#71717a]">
+                      Expires {invite.expires_at.toLocaleDateString("en", { dateStyle: "medium" })}
+                    </p>
+                  </div>
+                  <form action="/api/console" method="POST">
+                    <input type="hidden" name="intent" value="revoke_invite" />
+                    <input type="hidden" name="server_id" value={server.id} />
+                    <input type="hidden" name="token_hash" value={invite.token_hash} />
+                    <input type="hidden" name="return_to" value={return_to} />
+                    <button class="cursor-pointer text-xs font-medium text-[#dc2626] hover:underline" type="submit">
+                      Revoke
+                    </button>
+                  </form>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p class="mt-4 text-sm text-[#71717a]">No active sharing links.</p>
+          )
+        }
+      </div>
+    </section>
 
-		<section class="grid gap-5 sm:grid-cols-[190px_1fr]">
-			<div><h2 class="text-sm font-semibold text-[#dc2626]">Danger zone</h2><p class="mt-1 text-sm leading-5 text-[#71717a]">This action cannot be undone.</p></div>
-			<div class="rounded-lg border border-[#fecaca] bg-white p-5 shadow-xs"><div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><p class="text-sm font-medium">Delete this server</p><p class="mt-1 text-sm text-[#71717a]">Remove all users, groups, logs, and credentials.</p></div><form action="/api/console" method="POST" onsubmit="return confirm('Permanently delete this SCIM server and all of its data?')"><input type="hidden" name="intent" value="delete_server"/><input type="hidden" name="server_id" value={server.id}/><button class="h-9 cursor-pointer rounded-md bg-[#dc2626] px-3 text-sm font-medium text-white shadow-sm hover:bg-[#b91c1c]" type="submit">Delete server</button></form></div></div>
-		</section>
-	</div>
+    <section class="grid gap-5 sm:grid-cols-[190px_1fr]">
+      <div>
+        <h2 class="text-sm font-semibold text-[#dc2626]">Danger zone</h2><p
+          class="mt-1 text-sm leading-5 text-[#71717a]"
+        >
+          This action cannot be undone.
+        </p>
+      </div>
+      <div class="rounded-lg border border-[#fecaca] bg-white p-5 shadow-xs">
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p class="text-sm font-medium">Delete this server</p><p class="mt-1 text-sm text-[#71717a]">
+              Remove all users, groups, logs, and credentials.
+            </p>
+          </div><form
+            action="/api/console"
+            method="POST"
+            onsubmit="return confirm('Permanently delete this SCIM server and all of its data?')"
+          >
+            <input type="hidden" name="intent" value="delete_server" /><input
+              type="hidden"
+              name="server_id"
+              value={server.id}
+            /><button
+              class="h-9 cursor-pointer rounded-md bg-[#dc2626] px-3 text-sm font-medium text-white shadow-sm hover:bg-[#b91c1c]"
+              type="submit">Delete server</button
+            >
+          </form>
+        </div>
+      </div>
+    </section>
+  </div>
 </div>

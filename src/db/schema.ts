@@ -13,12 +13,8 @@ import {
 } from "drizzle-orm/pg-core";
 
 const timestamps = {
-  created_at: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-  updated_at: timestamp("updated_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
+  created_at: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updated_at: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 };
 
 export const console_users = pgTable(
@@ -36,9 +32,7 @@ export const console_users = pgTable(
   (table) => [
     uniqueIndex("uq_console_users_oidc_identity")
       .on(table.oidc_issuer, table.oidc_subject)
-      .where(
-        sql`${table.oidc_issuer} is not null and ${table.oidc_subject} is not null`,
-      ),
+      .where(sql`${table.oidc_issuer} is not null and ${table.oidc_subject} is not null`),
   ],
 );
 
@@ -49,12 +43,8 @@ export const console_sessions = pgTable(
     user_id: uuid("user_id")
       .notNull()
       .references(() => console_users.id, { onDelete: "cascade" }),
-    created_at: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-    last_seen_at: timestamp("last_seen_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    created_at: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    last_seen_at: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
     expires_at: timestamp("expires_at", { withTimezone: true }).notNull(),
   },
   (table) => [
@@ -73,9 +63,7 @@ export const oidc_transactions = pgTable(
     code_verifier: text("code_verifier").notNull(),
     nonce: text("nonce").notNull(),
     return_to: text("return_to").notNull().default("/"),
-    created_at: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    created_at: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     expires_at: timestamp("expires_at", { withTimezone: true }).notNull(),
   },
   (table) => [index("idx_oidc_transactions_expires_at").on(table.expires_at)],
@@ -89,9 +77,7 @@ export const console_flashes = pgTable(
       .notNull()
       .references(() => console_users.id, { onDelete: "cascade" }),
     payload: jsonb("payload").$type<Record<string, unknown>>().notNull(),
-    created_at: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    created_at: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     expires_at: timestamp("expires_at", { withTimezone: true }).notNull(),
   },
   (table) => [index("idx_console_flashes_expires_at").on(table.expires_at)],
@@ -126,9 +112,7 @@ export const scim_servers = pgTable(
   },
   (table) => [
     index("idx_scim_servers_created_by_user_id").on(table.created_by_user_id),
-    index("idx_scim_servers_last_console_access_at").on(
-      table.last_console_access_at,
-    ),
+    index("idx_scim_servers_last_console_access_at").on(table.last_console_access_at),
   ],
 );
 
@@ -141,9 +125,7 @@ export const server_members = pgTable(
     user_id: uuid("user_id")
       .notNull()
       .references(() => console_users.id, { onDelete: "cascade" }),
-    joined_at: timestamp("joined_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    joined_at: timestamp("joined_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     primaryKey({ columns: [table.server_id, table.user_id] }),
@@ -161,9 +143,7 @@ export const share_invites = pgTable(
     created_by_user_id: uuid("created_by_user_id")
       .notNull()
       .references(() => console_users.id, { onDelete: "cascade" }),
-    created_at: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    created_at: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     expires_at: timestamp("expires_at", { withTimezone: true }).notNull(),
     revoked_at: timestamp("revoked_at", { withTimezone: true }),
   },
@@ -189,18 +169,9 @@ export const scim_users = pgTable(
     ...timestamps,
   },
   (table) => [
-    index("idx_scim_users_server_id_created_at").on(
-      table.server_id,
-      table.created_at,
-    ),
-    index("idx_scim_users_server_id_external_id").on(
-      table.server_id,
-      table.external_id,
-    ),
-    uniqueIndex("uq_scim_users_server_user_name_lower").on(
-      table.server_id,
-      sql`lower(${table.user_name})`,
-    ),
+    index("idx_scim_users_server_id_created_at").on(table.server_id, table.created_at),
+    index("idx_scim_users_server_id_external_id").on(table.server_id, table.external_id),
+    uniqueIndex("uq_scim_users_server_user_name_lower").on(table.server_id, sql`lower(${table.user_name})`),
   ],
 );
 
@@ -217,14 +188,8 @@ export const scim_groups = pgTable(
     ...timestamps,
   },
   (table) => [
-    index("idx_scim_groups_server_id_created_at").on(
-      table.server_id,
-      table.created_at,
-    ),
-    index("idx_scim_groups_server_id_external_id").on(
-      table.server_id,
-      table.external_id,
-    ),
+    index("idx_scim_groups_server_id_created_at").on(table.server_id, table.created_at),
+    index("idx_scim_groups_server_id_external_id").on(table.server_id, table.external_id),
   ],
 );
 
@@ -237,9 +202,7 @@ export const scim_group_members = pgTable(
     user_id: uuid("user_id")
       .notNull()
       .references(() => scim_users.id, { onDelete: "cascade" }),
-    created_at: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    created_at: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     primaryKey({ columns: [table.group_id, table.user_id] }),
@@ -260,23 +223,15 @@ export const scim_events = pgTable(
     duration_ms: integer("duration_ms").notNull(),
     auth_mode: text("auth_mode"),
     auth_success: boolean("auth_success").notNull().default(false),
-    request_headers: jsonb("request_headers")
-      .$type<Record<string, string>>()
-      .notNull()
-      .default({}),
+    request_headers: jsonb("request_headers").$type<Record<string, string>>().notNull().default({}),
     request_body: text("request_body"),
     response_body: text("response_body"),
     request_truncated: boolean("request_truncated").notNull().default(false),
     response_truncated: boolean("response_truncated").notNull().default(false),
-    created_at: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    created_at: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_scim_events_server_created_at").on(
-      table.server_id,
-      table.created_at,
-    ),
+    index("idx_scim_events_server_created_at").on(table.server_id, table.created_at),
     index("idx_scim_events_server_id_id").on(table.server_id, table.id),
   ],
 );

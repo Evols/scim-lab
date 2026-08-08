@@ -1,88 +1,196 @@
 ---
-import { get_server_lifecycle } from '../../db';
-import type { ConsoleUserRecord, ScimServerRecord } from '../../db/schema.ts';
-import ResourceLink from './ResourceLink.astro';
+import { get_server_lifecycle } from "../../db";
+import type { ConsoleUserRecord, ScimServerRecord } from "../../db/schema.ts";
+import ResourceLink from "./ResourceLink.astro";
 
 interface Props {
-	user: ConsoleUserRecord;
-	servers: Array<{ server: ScimServerRecord; creator: ConsoleUserRecord }>;
-	selected_server?: ScimServerRecord;
-	view: string;
-	allow_create: boolean;
-	selected_lifecycle?: 'active' | 'deactivated' | 'expired' | null;
+  user: ConsoleUserRecord;
+  servers: Array<{ server: ScimServerRecord; creator: ConsoleUserRecord }>;
+  selected_server?: ScimServerRecord;
+  view: string;
+  allow_create: boolean;
+  selected_lifecycle?: "active" | "deactivated" | "expired" | null;
 }
 
 const { user, servers, selected_server, view, allow_create, selected_lifecycle } = Astro.props;
-const selected_query = selected_server ? `?server=${selected_server.id}` : '';
+const selected_query = selected_server ? `?server=${selected_server.id}` : "";
 ---
 
-<header class="sticky top-0 z-40 border-b border-[#e4e4e7] bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80">
-	<div class="mx-auto flex h-14 max-w-7xl items-center gap-4 px-4 sm:px-6">
-		<a class="flex shrink-0 items-center gap-2.5 text-sm font-semibold tracking-[-0.02em] text-[#09090b] no-underline" href={selected_server ? `/?server=${selected_server.id}` : '/'} aria-label="SCIM Lab home">
-			<span class="grid size-6 place-items-center rounded-md bg-[#18181b] font-mono text-[9px] font-semibold text-white">SL</span>
-			<span class="hidden sm:inline">SCIM Lab</span>
-		</a>
+<header
+  class="sticky top-0 z-40 border-b border-[#e4e4e7] bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80"
+>
+  <div class="mx-auto flex h-14 max-w-7xl items-center gap-4 px-4 sm:px-6">
+    <a
+      class="flex shrink-0 items-center gap-2.5 text-sm font-semibold tracking-[-0.02em] text-[#09090b] no-underline"
+      href={selected_server ? `/?server=${selected_server.id}` : "/"}
+      aria-label="SCIM Lab home"
+    >
+      <span class="grid size-6 place-items-center rounded-md bg-[#18181b] font-mono text-[9px] font-semibold text-white"
+        >SL</span
+      >
+      <span class="hidden sm:inline">SCIM Lab</span>
+    </a>
 
-		<span class="hidden h-4 w-px bg-[#e4e4e7] sm:block" aria-hidden="true"></span>
+    <span class="hidden h-4 w-px bg-[#e4e4e7] sm:block" aria-hidden="true"></span>
 
-		{selected_server && (
-			<details class="group relative min-w-0">
-				<summary class="flex h-8 max-w-[210px] cursor-pointer list-none items-center gap-2 rounded-md px-2.5 text-sm font-medium outline-none hover:bg-[#f4f4f5] focus-visible:ring-2 focus-visible:ring-[#a1a1aa] [&::-webkit-details-marker]:hidden">
-					<span class:list={['size-2 shrink-0 rounded-full', selected_lifecycle === 'active' ? 'bg-[#22c55e] shadow-[0_0_0_2px_#dcfce7]' : selected_lifecycle === 'deactivated' ? 'bg-[#f59e0b] shadow-[0_0_0_2px_#fef3c7]' : 'bg-[#ef4444] shadow-[0_0_0_2px_#fee2e2]']}></span>
-					<span class="truncate">{selected_server.name}</span>
-					<span class="ml-auto text-[10px] text-[#a1a1aa] transition group-open:rotate-180">⌄</span>
-				</summary>
-				<div class="absolute left-0 top-10 z-50 w-64 overflow-hidden rounded-md border border-[#e4e4e7] bg-white p-1 shadow-lg">
-					<p class="px-2 py-1.5 text-[11px] font-medium text-[#71717a]">Servers</p>
-					{servers.map(({ server, creator }) => {
-						const lifecycle = get_server_lifecycle(server, creator.is_anonymous);
-						return <a class:list={['flex items-center gap-2 rounded-sm px-2 py-2 text-sm no-underline outline-none hover:bg-[#f4f4f5]', server.id === selected_server.id ? 'bg-[#f4f4f5] text-[#09090b]' : 'text-[#3f3f46]']} href={`/?server=${server.id}`}>
-							<span class:list={['size-1.5 rounded-full', lifecycle === 'active' ? 'bg-[#22c55e]' : lifecycle === 'deactivated' ? 'bg-[#f59e0b]' : 'bg-[#ef4444]']}></span>
-							<span class="min-w-0 flex-1 truncate">{server.name}</span>
-							{server.id === selected_server.id && <span class="text-xs">✓</span>}
-						</a>;
-					})}
-					{allow_create && <><div class="my-1 h-px bg-[#e4e4e7]"></div><button class="flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-2 text-left text-sm text-[#3f3f46] hover:bg-[#f4f4f5]" type="button" data-open-create><span class="text-base leading-none">+</span> New server</button></>}
-				</div>
-			</details>
-		)}
+    {
+      selected_server && (
+        <details class="group relative min-w-0">
+          <summary class="flex h-8 max-w-[210px] cursor-pointer list-none items-center gap-2 rounded-md px-2.5 text-sm font-medium outline-none hover:bg-[#f4f4f5] focus-visible:ring-2 focus-visible:ring-[#a1a1aa] [&::-webkit-details-marker]:hidden">
+            <span
+              class:list={[
+                "size-2 shrink-0 rounded-full",
+                selected_lifecycle === "active"
+                  ? "bg-[#22c55e] shadow-[0_0_0_2px_#dcfce7]"
+                  : selected_lifecycle === "deactivated"
+                    ? "bg-[#f59e0b] shadow-[0_0_0_2px_#fef3c7]"
+                    : "bg-[#ef4444] shadow-[0_0_0_2px_#fee2e2]",
+              ]}
+            />
+            <span class="truncate">{selected_server.name}</span>
+            <span class="ml-auto text-[10px] text-[#a1a1aa] transition group-open:rotate-180">⌄</span>
+          </summary>
+          <div class="absolute left-0 top-10 z-50 w-64 overflow-hidden rounded-md border border-[#e4e4e7] bg-white p-1 shadow-lg">
+            <p class="px-2 py-1.5 text-[11px] font-medium text-[#71717a]">Servers</p>
+            {servers.map(({ server, creator }) => {
+              const lifecycle = get_server_lifecycle(server, creator.is_anonymous);
+              return (
+                <a
+                  class:list={[
+                    "flex items-center gap-2 rounded-sm px-2 py-2 text-sm no-underline outline-none hover:bg-[#f4f4f5]",
+                    server.id === selected_server.id ? "bg-[#f4f4f5] text-[#09090b]" : "text-[#3f3f46]",
+                  ]}
+                  href={`/?server=${server.id}`}
+                >
+                  <span
+                    class:list={[
+                      "size-1.5 rounded-full",
+                      lifecycle === "active"
+                        ? "bg-[#22c55e]"
+                        : lifecycle === "deactivated"
+                          ? "bg-[#f59e0b]"
+                          : "bg-[#ef4444]",
+                    ]}
+                  />
+                  <span class="min-w-0 flex-1 truncate">{server.name}</span>
+                  {server.id === selected_server.id && <span class="text-xs">✓</span>}
+                </a>
+              );
+            })}
+            {allow_create && (
+              <>
+                <div class="my-1 h-px bg-[#e4e4e7]" />
+                <button
+                  class="flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-2 text-left text-sm text-[#3f3f46] hover:bg-[#f4f4f5]"
+                  type="button"
+                  data-open-create
+                >
+                  <span class="text-base leading-none">+</span> New server
+                </button>
+              </>
+            )}
+          </div>
+        </details>
+      )
+    }
 
-		{selected_server && <nav class="ml-1 hidden items-center gap-1 md:flex" aria-label="Server resources">
-			<ResourceLink label="Users" href={`${selected_query}&view=users`} active={view === 'users'} />
-			<ResourceLink label="Groups" href={`${selected_query}&view=groups`} active={view === 'groups'} />
-			<ResourceLink label="Logs" href={`${selected_query}&view=logs`} active={view === 'logs'} />
-      <ResourceLink label="Settings" href={`${selected_query}&view=settings`} active={view === 'settings'} />
-		</nav>}
+    {
+      selected_server && (
+        <nav class="ml-1 hidden items-center gap-1 md:flex" aria-label="Server resources">
+          <ResourceLink label="Users" href={`${selected_query}&view=users`} active={view === "users"} />
+          <ResourceLink label="Groups" href={`${selected_query}&view=groups`} active={view === "groups"} />
+          <ResourceLink label="Logs" href={`${selected_query}&view=logs`} active={view === "logs"} />
+          <ResourceLink label="Settings" href={`${selected_query}&view=settings`} active={view === "settings"} />
+        </nav>
+      )
+    }
 
-		<div class="ml-auto flex items-center gap-2">
-			{user.is_anonymous ? (
-				<a class="inline-flex h-9 items-center rounded-md bg-[#18181b] px-3.5 text-sm font-medium text-white no-underline shadow-sm hover:bg-[#27272a]" href="/auth/login">Sign in</a>
-			) : (
-				<details class="group relative">
-					<summary class="grid size-9 cursor-pointer list-none place-items-center rounded-full border border-[#e4e4e7] bg-white text-xs font-semibold outline-none hover:bg-[#f4f4f5] [&::-webkit-details-marker]:hidden">{(user.display_name ?? user.email ?? 'U').slice(0, 1).toUpperCase()}</summary>
-					<div class="absolute right-0 top-11 z-50 w-64 rounded-md border border-[#e4e4e7] bg-white p-1 shadow-lg">
-						<div class="px-2 py-2"><p class="truncate text-sm font-medium">{user.display_name ?? 'Signed in'}</p><p class="mt-0.5 truncate text-xs text-[#71717a]">{user.email ?? user.oidc_subject}</p></div>
-						<div class="my-1 h-px bg-[#e4e4e7]"></div>
-						<form action="/auth/logout" method="POST"><button class="w-full cursor-pointer rounded-sm px-2 py-2 text-left text-sm text-[#3f3f46] hover:bg-[#f4f4f5]" type="submit">Sign out</button></form>
-					</div>
-				</details>
-			)}
-		</div>
-	</div>
+    <div class="ml-auto flex items-center gap-2">
+      {
+        user.is_anonymous ? (
+          <a
+            class="inline-flex h-9 items-center rounded-md bg-[#18181b] px-3.5 text-sm font-medium text-white no-underline shadow-sm hover:bg-[#27272a]"
+            href="/auth/login"
+          >
+            Sign in
+          </a>
+        ) : (
+          <details class="group relative">
+            <summary class="grid size-9 cursor-pointer list-none place-items-center rounded-full border border-[#e4e4e7] bg-white text-xs font-semibold outline-none hover:bg-[#f4f4f5] [&::-webkit-details-marker]:hidden">
+              {(user.display_name ?? user.email ?? "U").slice(0, 1).toUpperCase()}
+            </summary>
+            <div class="absolute right-0 top-11 z-50 w-64 rounded-md border border-[#e4e4e7] bg-white p-1 shadow-lg">
+              <div class="px-2 py-2">
+                <>
+                  <p class="truncate text-sm font-medium">{user.display_name ?? "Signed in"}</p>
+                  <p class="mt-0.5 truncate text-xs text-[#71717a]">{user.email ?? user.oidc_subject}</p>
+                </>
+              </div>
+              <div class="my-1 h-px bg-[#e4e4e7]" />
+              <form action="/auth/logout" method="POST">
+                <button
+                  class="w-full cursor-pointer rounded-sm px-2 py-2 text-left text-sm text-[#3f3f46] hover:bg-[#f4f4f5]"
+                  type="submit"
+                >
+                  Sign out
+                </button>
+              </form>
+            </div>
+          </details>
+        )
+      }
+    </div>
+  </div>
 </header>
 
-<dialog class="w-[min(92vw,440px)] rounded-lg border border-[#e4e4e7] bg-white p-0 text-[#09090b] shadow-2xl backdrop:bg-black/50" data-create-dialog>
-	<form class="p-6" action="/api/console" method="POST">
-		<input type="hidden" name="intent" value="create_server" />
-		<div class="flex items-start justify-between gap-4"><div><h2 class="text-lg font-semibold tracking-[-0.02em]">Create server</h2><p class="mt-1.5 text-sm leading-6 text-[#71717a]">A SCIM endpoint and bearer token are generated immediately.</p></div><button class="cursor-pointer text-lg leading-none text-[#a1a1aa] hover:text-[#09090b]" type="button" data-close-create aria-label="Close">×</button></div>
-		<label class="mt-5 block text-sm font-medium" for="new-server-name">Name</label>
-		<input class="mt-2 h-10 w-full rounded-md border border-[#d4d4d8] bg-white px-3 text-sm shadow-xs outline-none placeholder:text-[#a1a1aa] focus:border-[#a1a1aa] focus:ring-2 focus:ring-[#e4e4e7]" id="new-server-name" name="name" maxlength="80" value="Provisioning sandbox" required />
-		<div class="mt-6 flex justify-end gap-2"><button class="h-9 cursor-pointer rounded-md border border-[#e4e4e7] bg-white px-4 text-sm font-medium shadow-xs hover:bg-[#f4f4f5]" type="button" data-close-create>Cancel</button><button class="h-9 cursor-pointer rounded-md bg-[#18181b] px-4 text-sm font-medium text-white shadow-sm hover:bg-[#27272a]" type="submit">Create</button></div>
-	</form>
+<dialog
+  class="w-[min(92vw,440px)] rounded-lg border border-[#e4e4e7] bg-white p-0 text-[#09090b] shadow-2xl backdrop:bg-black/50"
+  data-create-dialog
+>
+  <form class="p-6" action="/api/console" method="POST">
+    <input type="hidden" name="intent" value="create_server" />
+    <div class="flex items-start justify-between gap-4">
+      <div>
+        <h2 class="text-lg font-semibold tracking-[-0.02em]">Create server</h2><p
+          class="mt-1.5 text-sm leading-6 text-[#71717a]"
+        >
+          A SCIM endpoint and bearer token are generated immediately.
+        </p>
+      </div><button
+        class="cursor-pointer text-lg leading-none text-[#a1a1aa] hover:text-[#09090b]"
+        type="button"
+        data-close-create
+        aria-label="Close">×</button
+      >
+    </div>
+    <label class="mt-5 block text-sm font-medium" for="new-server-name">Name</label>
+    <input
+      class="mt-2 h-10 w-full rounded-md border border-[#d4d4d8] bg-white px-3 text-sm shadow-xs outline-none placeholder:text-[#a1a1aa] focus:border-[#a1a1aa] focus:ring-2 focus:ring-[#e4e4e7]"
+      id="new-server-name"
+      name="name"
+      maxlength="80"
+      value="Provisioning sandbox"
+      required
+    />
+    <div class="mt-6 flex justify-end gap-2">
+      <button
+        class="h-9 cursor-pointer rounded-md border border-[#e4e4e7] bg-white px-4 text-sm font-medium shadow-xs hover:bg-[#f4f4f5]"
+        type="button"
+        data-close-create>Cancel</button
+      ><button
+        class="h-9 cursor-pointer rounded-md bg-[#18181b] px-4 text-sm font-medium text-white shadow-sm hover:bg-[#27272a]"
+        type="submit">Create</button
+      >
+    </div>
+  </form>
 </dialog>
 
 <script>
-	const create_dialog = document.querySelector<HTMLDialogElement>('[data-create-dialog]');
-	document.querySelectorAll('[data-open-create]').forEach((button) => button.addEventListener('click', () => create_dialog?.showModal()));
-	document.querySelectorAll('[data-close-create]').forEach((button) => button.addEventListener('click', () => create_dialog?.close()));
+  const create_dialog = document.querySelector<HTMLDialogElement>("[data-create-dialog]");
+  document
+    .querySelectorAll("[data-open-create]")
+    .forEach((button) => button.addEventListener("click", () => create_dialog?.showModal()));
+  document
+    .querySelectorAll("[data-close-create]")
+    .forEach((button) => button.addEventListener("click", () => create_dialog?.close()));
 </script>

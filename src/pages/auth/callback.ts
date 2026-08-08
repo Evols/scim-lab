@@ -1,13 +1,6 @@
 import type { APIRoute } from "astro";
-import {
-  complete_oidc_login,
-  replace_session,
-  take_oidc_transaction,
-} from "../../db";
-import {
-  session_cookie_name,
-  session_cookie_options,
-} from "../../lib/console_context";
+import { complete_oidc_login, replace_session, take_oidc_transaction } from "../../db";
+import { session_cookie_name, session_cookie_options } from "../../lib/console_context";
 import { get_oidc_configuration, oidc } from "../../lib/oidc";
 import { app_config } from "../../lib/config";
 
@@ -28,21 +21,15 @@ export const GET: APIRoute = async ({ cookies, redirect, url }) => {
     const configuration = await get_oidc_configuration();
     const callback_url = new URL("/auth/callback", app_config.app_origin);
     callback_url.search = url.search;
-    const tokens = await oidc.authorizationCodeGrant(
-      configuration,
-      callback_url,
-      {
-        pkceCodeVerifier: transaction.code_verifier,
-        expectedState: state,
-        expectedNonce: transaction.nonce,
-        idTokenExpected: true,
-      },
-    );
+    const tokens = await oidc.authorizationCodeGrant(configuration, callback_url, {
+      pkceCodeVerifier: transaction.code_verifier,
+      expectedState: state,
+      expectedNonce: transaction.nonce,
+      idTokenExpected: true,
+    });
     const claims = tokens.claims();
     if (!claims?.sub || !claims.iss) {
-      throw new Error(
-        "The identity token did not include issuer and subject claims.",
-      );
+      throw new Error("The identity token did not include issuer and subject claims.");
     }
     const user = await complete_oidc_login(transaction.user_id, {
       issuer: String(claims.iss),

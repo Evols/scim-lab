@@ -30,9 +30,7 @@ export function session_cookie_options(max_age = 30 * 86_400) {
   };
 }
 
-export async function get_console_context(
-  cookies: CookieStore,
-): Promise<ConsoleContext> {
+export async function get_console_context(cookies: CookieStore): Promise<ConsoleContext> {
   await purge_expired_records();
   const raw_token = cookies.get(session_cookie_name)?.value;
   if (raw_token) {
@@ -42,18 +40,11 @@ export async function get_console_context(
     }
   }
   const context = await create_anonymous_context();
-  cookies.set(
-    session_cookie_name,
-    context.session_token!,
-    session_cookie_options(37 * 86_400),
-  );
+  cookies.set(session_cookie_name, context.session_token!, session_cookie_options(37 * 86_400));
   return context;
 }
 
-export async function get_flash(
-  cookies: CookieStore,
-  user_id: string,
-): Promise<Record<string, unknown> | null> {
+export async function get_flash(cookies: CookieStore, user_id: string): Promise<Record<string, unknown> | null> {
   const token = cookies.get(flash_cookie_name)?.value;
   if (!token) {
     return null;

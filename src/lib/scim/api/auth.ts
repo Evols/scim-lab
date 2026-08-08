@@ -6,17 +6,12 @@ export type AuthenticationResult = {
   mode: string | null;
 };
 
-export function authenticate(
-  server: ScimServerRecord,
-  authorization: string | null,
-): AuthenticationResult {
+export function authenticate(server: ScimServerRecord, authorization: string | null): AuthenticationResult {
   if (server.auth_mode === "bearer") {
     const match = authorization?.match(/^Bearer\s+(.+)$/i);
     return {
       // Compare hashes in constant time; raw credentials are never persisted.
-      success: Boolean(
-        match && safe_hash_equal(server.bearer_token_hash, match[1]!),
-      ),
+      success: Boolean(match && safe_hash_equal(server.bearer_token_hash, match[1]!)),
       mode: match ? "bearer" : null,
     };
   }
@@ -31,9 +26,7 @@ export function authenticate(
     const username = separator >= 0 ? decoded.slice(0, separator) : "";
     const password = separator >= 0 ? decoded.slice(separator + 1) : "";
     return {
-      success:
-        username === server.basic_username &&
-        safe_hash_equal(server.basic_password_hash, password),
+      success: username === server.basic_username && safe_hash_equal(server.basic_password_hash, password),
       mode: "basic",
     };
   } catch {

@@ -1,19 +1,7 @@
 import type { ScimServerRecord } from "../../../db/schema.ts";
-import {
-  create_user,
-  delete_user,
-  get_user,
-  list_users,
-  patch_user,
-  replace_user,
-} from "../server/users.ts";
+import { create_user, delete_user, get_user, list_users, patch_user, replace_user } from "../server/users.ts";
 import { base_url } from "../server/resources.ts";
-import {
-  PatchRequestSchema,
-  UserListResponseSchema,
-  UserResourceSchema,
-  UserWriteSchema,
-} from "../schemas.ts";
+import { PatchRequestSchema, UserListResponseSchema, UserResourceSchema, UserWriteSchema } from "../schemas.ts";
 import { validate_json_body } from "./body.ts";
 import { scim_error } from "./error.ts";
 import { json_response } from "./response.ts";
@@ -28,10 +16,7 @@ async function route_users(
   body: string,
 ): Promise<Response> {
   if (method === "GET" && resource_id) {
-    return json_response(
-      await get_user(server.id, resource_id, origin),
-      UserResourceSchema,
-    );
+    return json_response(await get_user(server.id, resource_id, origin), UserResourceSchema);
   }
 
   if (method === "GET") {
@@ -68,10 +53,7 @@ async function route_users(
     if (!validation.success) {
       return validation.response;
     }
-    return json_response(
-      await replace_user(server.id, resource_id, validation.data, origin),
-      UserResourceSchema,
-    );
+    return json_response(await replace_user(server.id, resource_id, validation.data, origin), UserResourceSchema);
   }
   if (method === "PATCH") {
     const validation = validate_json_body(body, PatchRequestSchema);
@@ -79,12 +61,7 @@ async function route_users(
       return validation.response;
     }
     return json_response(
-      await patch_user(
-        server.id,
-        resource_id,
-        validation.data.Operations,
-        origin,
-      ),
+      await patch_user(server.id, resource_id, validation.data.Operations, origin),
       UserResourceSchema,
     );
   }

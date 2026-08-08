@@ -26,18 +26,13 @@ export function base_url(origin: string, server_id: string): string {
   return `${origin}/scim/${server_id}/v2`;
 }
 
-export function clean_user_payload(
-  input: UserWriteInput | UserResource,
-): UserData {
+export function clean_user_payload(input: UserWriteInput | UserResource): UserData {
   // Identity fields live in dedicated columns. Keep only extensible SCIM fields
   // in `data` so clients cannot persist computed `groups` or `meta` values.
   return UserDataSchema.parse(input);
 }
 
-export async function user_resource(
-  row: ScimUserRecord,
-  origin: string,
-): Promise<UserResource> {
+export async function user_resource(row: ScimUserRecord, origin: string): Promise<UserResource> {
   const membership_rows = await db
     .select({ group: scim_groups })
     .from(scim_group_members)
@@ -66,10 +61,7 @@ export async function user_resource(
   });
 }
 
-export async function group_resource(
-  row: ScimGroupRecord,
-  origin: string,
-): Promise<GroupResource> {
+export async function group_resource(row: ScimGroupRecord, origin: string): Promise<GroupResource> {
   const members = await db
     .select({ user: scim_users })
     .from(scim_group_members)

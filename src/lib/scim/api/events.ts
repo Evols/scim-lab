@@ -4,17 +4,9 @@ import { scim_events } from "../../../db/schema.ts";
 type DynamicObject = Record<string, unknown>;
 
 function sanitized_headers(headers: Headers): Record<string, string> {
-  const sensitive = new Set([
-    "authorization",
-    "cookie",
-    "proxy-authorization",
-    "x-api-key",
-  ]);
+  const sensitive = new Set(["authorization", "cookie", "proxy-authorization", "x-api-key"]);
   return Object.fromEntries(
-    [...headers.entries()].map(([name, value]) => [
-      name,
-      sensitive.has(name.toLowerCase()) ? "[REDACTED]" : value,
-    ]),
+    [...headers.entries()].map(([name, value]) => [name, sensitive.has(name.toLowerCase()) ? "[REDACTED]" : value]),
   );
 }
 
@@ -33,9 +25,7 @@ function redact_body(value: string): string {
       return Object.fromEntries(
         Object.entries(input as DynamicObject).map(([key, entry]) => [
           key,
-          /(password|token|secret|authorization)/i.test(key)
-            ? "[REDACTED]"
-            : visit(entry),
+          /(password|token|secret|authorization)/i.test(key) ? "[REDACTED]" : visit(entry),
         ]),
       );
     };
@@ -58,8 +48,7 @@ export async function record_event(
   // `request_body` is the raw body captured before Zod parsing. Redaction only
   // replaces sensitive values; it does not select or discard object fields.
   const request_value = redact_body(request_body);
-  const response_value =
-    response.status === 204 ? "" : await response.clone().text();
+  const response_value = response.status === 204 ? "" : await response.clone().text();
   const request_url = new URL(request.url);
   await db.insert(scim_events).values({
     server_id,

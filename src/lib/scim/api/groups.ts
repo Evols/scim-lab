@@ -1,19 +1,7 @@
 import type { ScimServerRecord } from "../../../db/schema.ts";
-import {
-  create_group,
-  delete_group,
-  get_group,
-  list_groups,
-  patch_group,
-  replace_group,
-} from "../server/groups.ts";
+import { create_group, delete_group, get_group, list_groups, patch_group, replace_group } from "../server/groups.ts";
 import { base_url } from "../server/resources.ts";
-import {
-  GroupListResponseSchema,
-  GroupResourceSchema,
-  GroupWriteSchema,
-  PatchRequestSchema,
-} from "../schemas.ts";
+import { GroupListResponseSchema, GroupResourceSchema, GroupWriteSchema, PatchRequestSchema } from "../schemas.ts";
 import { validate_json_body } from "./body.ts";
 import { scim_error } from "./error.ts";
 import { json_response } from "./response.ts";
@@ -28,10 +16,7 @@ async function route_groups(
   body: string,
 ): Promise<Response> {
   if (method === "GET" && resource_id) {
-    return json_response(
-      await get_group(server.id, resource_id, origin),
-      GroupResourceSchema,
-    );
+    return json_response(await get_group(server.id, resource_id, origin), GroupResourceSchema);
   }
 
   if (method === "GET") {
@@ -66,10 +51,7 @@ async function route_groups(
     if (!validation.success) {
       return validation.response;
     }
-    return json_response(
-      await replace_group(server.id, resource_id, validation.data, origin),
-      GroupResourceSchema,
-    );
+    return json_response(await replace_group(server.id, resource_id, validation.data, origin), GroupResourceSchema);
   }
   if (method === "PATCH") {
     const validation = validate_json_body(body, PatchRequestSchema);
@@ -77,12 +59,7 @@ async function route_groups(
       return validation.response;
     }
     return json_response(
-      await patch_group(
-        server.id,
-        resource_id,
-        validation.data.Operations,
-        origin,
-      ),
+      await patch_group(server.id, resource_id, validation.data.Operations, origin),
       GroupResourceSchema,
     );
   }

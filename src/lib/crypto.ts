@@ -1,11 +1,4 @@
-import {
-  createCipheriv,
-  createDecipheriv,
-  createHash,
-  createHmac,
-  randomBytes,
-  timingSafeEqual,
-} from "node:crypto";
+import { createCipheriv, createDecipheriv, createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { app_config } from "./config";
 
 const credential_encryption_key = createHash("sha256")
@@ -18,15 +11,10 @@ export function random_secret(bytes = 32): string {
 }
 
 export function hash_secret(value: string): string {
-  return createHmac("sha256", app_config.app_secret)
-    .update(value)
-    .digest("hex");
+  return createHmac("sha256", app_config.app_secret).update(value).digest("hex");
 }
 
-export function safe_hash_equal(
-  stored_hash: string | null,
-  candidate: string,
-): boolean {
+export function safe_hash_equal(stored_hash: string | null, candidate: string): boolean {
   if (!stored_hash) {
     return false;
   }
@@ -38,15 +26,8 @@ export function safe_hash_equal(
 
 export function encrypt_secret(value: string): string {
   const initialization_vector = randomBytes(12);
-  const cipher = createCipheriv(
-    "aes-256-gcm",
-    credential_encryption_key,
-    initialization_vector,
-  );
-  const encrypted = Buffer.concat([
-    cipher.update(value, "utf8"),
-    cipher.final(),
-  ]);
+  const cipher = createCipheriv("aes-256-gcm", credential_encryption_key, initialization_vector);
+  const encrypted = Buffer.concat([cipher.update(value, "utf8"), cipher.final()]);
   const authentication_tag = cipher.getAuthTag();
   return [
     "v1",
@@ -57,17 +38,9 @@ export function encrypt_secret(value: string): string {
 }
 
 export function decrypt_secret(value: string): string {
-  const [version, initialization_vector, authentication_tag, encrypted] =
-    value.split(".");
-  if (
-    version !== "v1" ||
-    !initialization_vector ||
-    !authentication_tag ||
-    encrypted === undefined
-  ) {
-    throw new Error(
-      "The stored credential has an unsupported encryption format.",
-    );
+  const [version, initialization_vector, authentication_tag, encrypted] = value.split(".");
+  if (version !== "v1" || !initialization_vector || !authentication_tag || encrypted === undefined) {
+    throw new Error("The stored credential has an unsupported encryption format.");
   }
   const decipher = createDecipheriv(
     "aes-256-gcm",
@@ -75,10 +48,7 @@ export function decrypt_secret(value: string): string {
     Buffer.from(initialization_vector, "base64url"),
   );
   decipher.setAuthTag(Buffer.from(authentication_tag, "base64url"));
-  return Buffer.concat([
-    decipher.update(Buffer.from(encrypted, "base64url")),
-    decipher.final(),
-  ]).toString("utf8");
+  return Buffer.concat([decipher.update(Buffer.from(encrypted, "base64url")), decipher.final()]).toString("utf8");
 }
 
 export function generated_bearer_token(): string {

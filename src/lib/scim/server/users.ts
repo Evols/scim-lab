@@ -3,12 +3,7 @@ import { db } from "../../../db";
 import { scim_users } from "../../../db/schema.ts";
 import { matches_filter } from "./filter.ts";
 import { paginate, type ListQuery } from "./pagination.ts";
-import type {
-  PatchOperation,
-  UserListResponse,
-  UserResource,
-  UserWriteInput,
-} from "../schemas.ts";
+import type { PatchOperation, UserListResponse, UserResource, UserWriteInput } from "../schemas.ts";
 import { ScimServiceError } from "./error.ts";
 import { merge_patch_value } from "./patch.ts";
 import { clean_user_payload, user_resource } from "./resources.ts";
@@ -25,48 +20,29 @@ async function find_user(server_id: string, user_id: string) {
   return rows[0];
 }
 
-export async function list_users(
-  server_id: string,
-  origin: string,
-  query: ListQuery,
-): Promise<UserListResponse> {
+export async function list_users(server_id: string, origin: string, query: ListQuery): Promise<UserListResponse> {
   const rows = await db
     .select()
     .from(scim_users)
     .where(eq(scim_users.server_id, server_id))
     .orderBy(asc(scim_users.created_at));
-  let resources = await Promise.all(
-    rows.map((row) => user_resource(row, origin)),
-  );
+  let resources = await Promise.all(rows.map((row) => user_resource(row, origin)));
   if (query.filter) {
     const filter = query.filter;
     try {
-      resources = resources.filter((resource) =>
-        matches_filter(resource, filter),
-      );
+      resources = resources.filter((resource) => matches_filter(resource, filter));
     } catch {
-      throw new ScimServiceError(
-        "filter_invalid",
-        "The supplied filter is invalid or unsupported.",
-      );
+      throw new ScimServiceError("filter_invalid", "The supplied filter is invalid or unsupported.");
     }
   }
   return paginate(resources, query);
 }
 
-export async function get_user(
-  server_id: string,
-  user_id: string,
-  origin: string,
-): Promise<UserResource> {
+export async function get_user(server_id: string, user_id: string, origin: string): Promise<UserResource> {
   return user_resource(await find_user(server_id, user_id), origin);
 }
 
-export async function create_user(
-  server_id: string,
-  input: UserWriteInput,
-  origin: string,
-): Promise<UserResource> {
+export async function create_user(server_id: string, input: UserWriteInput, origin: string): Promise<UserResource> {
   const user_name = String(input.userName ?? "").trim();
   if (!user_name) {
     throw new ScimServiceError("user_name_required", "userName is required.");
@@ -75,18 +51,13 @@ export async function create_user(
   return db.transaction(async (transaction) => {
     // Serialize the count and insert per server so concurrent requests cannot
     // both observe room below the 100-user cap.
-    await transaction.execute(
-      sql`select pg_advisory_xact_lock(hashtext(${server_id}))`,
-    );
+    await transaction.execute(sql`select pg_advisory_xact_lock(hashtext(${server_id}))`);
     const [{ value }] = await transaction
       .select({ value: count() })
       .from(scim_users)
       .where(eq(scim_users.server_id, server_id));
     if (Number(value) >= 100) {
-      throw new ScimServiceError(
-        "user_limit_reached",
-        "This server has reached its 100-user limit.",
-      );
+      throw new ScimServiceError("user_limit_reached", "This server has reached its 100-user limit.");
     }
 
     try {
@@ -104,20 +75,14 @@ export async function create_user(
       return user_resource(created!, origin);
     } catch (error) {
       if ((error as { code?: string }).code === "23505") {
-        throw new ScimServiceError(
-          "user_name_not_unique",
-          "userName must be unique.",
-        );
+        throw new ScimServiceError("user_name_not_unique", "userName must be unique.");
       }
       throw error;
     }
   });
 }
 
-export async function delete_user(
-  server_id: string,
-  user_id: string,
-): Promise<void> {
+export async function delete_user(server_id: string, user_id: string): Promise<void> {
   const existing = await find_user(server_id, user_id);
   await db.delete(scim_users).where(eq(scim_users.id, existing.id));
 }
@@ -151,10 +116,7 @@ export async function replace_user(
     return user_resource(updated!, origin);
   } catch (error) {
     if ((error as { code?: string }).code === "23505") {
-      throw new ScimServiceError(
-        "user_name_not_unique",
-        "userName must be unique.",
-      );
+      throw new ScimServiceError("user_name_not_unique", "userName must be unique.");
     }
     throw error;
   }
@@ -171,25 +133,14 @@ export async function patch_user(
   for (const operation of operations) {
     const op = operation.op.toLowerCase();
     if (!["add", "replace", "remove"].includes(op)) {
-      throw new ScimServiceError(
-        "patch_operation_unsupported",
-        "Unsupported PATCH operation.",
-      );
+      throw new ScimServiceError("patch_operation_unsupported", "Unsupported PATCH operation.");
     }
-    resource = merge_patch_value(
-      resource,
-      operation.path || undefined,
-      operation.value,
-      op,
-    );
+    resource = merge_patch_value(resource, operation.path || undefined, operation.value, op);
   }
 
   const user_name = String(resource.userName ?? "").trim();
   if (!user_name) {
-    throw new ScimServiceError(
-      "user_patch_removes_user_name",
-      "PATCH cannot remove userName.",
-    );
+    throw new ScimServiceError("user_patch_removes_user_name", "PATCH cannot remove userName.");
   }
   const [updated] = await db
     .update(scim_users)

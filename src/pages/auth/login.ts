@@ -12,22 +12,13 @@ export const GET: APIRoute = async ({ cookies, redirect, url }) => {
     return redirect("/", 303);
   }
   const return_to_value = url.searchParams.get("return_to") ?? "/";
-  const return_to =
-    return_to_value.startsWith("/") && !return_to_value.startsWith("//")
-      ? return_to_value
-      : "/";
+  const return_to = return_to_value.startsWith("/") && !return_to_value.startsWith("//") ? return_to_value : "/";
   const configuration = await get_oidc_configuration();
   const state = oidc.randomState();
   const nonce = oidc.randomNonce();
   const code_verifier = oidc.randomPKCECodeVerifier();
   const code_challenge = await oidc.calculatePKCECodeChallenge(code_verifier);
-  await save_oidc_transaction(
-    context.user.id,
-    state,
-    code_verifier,
-    nonce,
-    return_to,
-  );
+  await save_oidc_transaction(context.user.id, state, code_verifier, nonce, return_to);
   const authorization_url = oidc.buildAuthorizationUrl(configuration, {
     redirect_uri: `${app_config.app_origin}/auth/callback`,
     response_type: "code",

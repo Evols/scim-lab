@@ -1,29 +1,113 @@
 ---
-import type { ScimUserRecord } from '../../db/schema.ts';
+import type { ScimUserRecord } from "../../db/schema.ts";
 
-interface Props { users: ScimUserRecord[] }
+interface Props {
+  users: ScimUserRecord[];
+}
 const { users } = Astro.props;
 ---
 
 <div>
-	<div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-		<div><h1 class="text-2xl font-semibold tracking-[-0.03em]">Users</h1><p class="mt-1 text-sm text-[#71717a]">Users provisioned through this SCIM server.</p></div>
-		<div class="flex items-center gap-2"><input class="h-9 w-full rounded-md border border-[#d4d4d8] bg-white px-3 text-sm shadow-xs outline-none placeholder:text-[#a1a1aa] focus:ring-2 focus:ring-[#e4e4e7] sm:w-64" type="search" placeholder="Search users…" aria-label="Search users" data-user-search/><span class="inline-flex h-9 items-center rounded-md border border-[#e4e4e7] bg-white px-3 text-xs font-medium text-[#52525b] shadow-xs">{users.length} / 100</span></div>
-	</div>
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div>
+      <h1 class="text-2xl font-semibold tracking-[-0.03em]">Users</h1><p class="mt-1 text-sm text-[#71717a]">
+        Users provisioned through this SCIM server.
+      </p>
+    </div>
+    <div class="flex items-center gap-2">
+      <input
+        class="h-9 w-full rounded-md border border-[#d4d4d8] bg-white px-3 text-sm shadow-xs outline-none placeholder:text-[#a1a1aa] focus:ring-2 focus:ring-[#e4e4e7] sm:w-64"
+        type="search"
+        placeholder="Search users…"
+        aria-label="Search users"
+        data-user-search
+      /><span
+        class="inline-flex h-9 items-center rounded-md border border-[#e4e4e7] bg-white px-3 text-xs font-medium text-[#52525b] shadow-xs"
+        >{users.length} / 100</span
+      >
+    </div>
+  </div>
 
-	<section class="mt-6 overflow-hidden rounded-lg border border-[#e4e4e7] bg-white shadow-xs">
-		{users.length ? (
-			<div class="overflow-x-auto"><table class="w-full min-w-[720px] border-collapse text-left"><thead class="bg-[#fafafa]"><tr class="border-b border-[#e4e4e7] text-xs text-[#71717a]"><th class="h-10 px-4 font-medium">User</th><th class="h-10 px-4 font-medium">Username</th><th class="h-10 px-4 font-medium">External ID</th><th class="h-10 px-4 font-medium">Status</th><th class="h-10 px-4 text-right font-medium">Updated</th></tr></thead><tbody>{users.map((user) => <tr class="border-b border-[#e4e4e7] last:border-0 hover:bg-[#fafafa]" data-user-row data-search-value={`${user.display_name ?? ''} ${user.user_name} ${user.external_id ?? ''}`.toLowerCase()}><td class="px-4 py-3"><div class="flex items-center gap-3"><span class="grid size-8 place-items-center rounded-full bg-[#f4f4f5] text-xs font-medium text-[#52525b]">{(user.display_name ?? user.user_name).slice(0, 1).toUpperCase()}</span><span class="text-sm font-medium">{user.display_name ?? 'Unnamed user'}</span></div></td><td class="px-4 py-3 font-mono text-xs text-[#3f3f46]">{user.user_name}</td><td class="px-4 py-3 font-mono text-xs text-[#71717a]">{user.external_id ?? '—'}</td><td class="px-4 py-3"><span class:list={['inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium', user.active ? 'border-[#bbf7d0] bg-[#f0fdf4] text-[#15803d]' : 'border-[#e4e4e7] bg-[#fafafa] text-[#71717a]']}>{user.active ? 'Active' : 'Inactive'}</span></td><td class="px-4 py-3 text-right text-xs text-[#71717a]">{user.updated_at.toLocaleString('en', { dateStyle: 'medium', timeStyle: 'short' })}</td></tr>)}</tbody></table></div>
-		) : (
-			<div class="grid min-h-72 place-items-center px-6 py-12 text-center"><div><span class="mx-auto grid size-10 place-items-center rounded-md border border-[#e4e4e7] bg-[#fafafa] text-[#71717a]">U</span><h2 class="mt-4 text-sm font-semibold">No users yet</h2><p class="mt-1.5 max-w-sm text-sm leading-6 text-[#71717a]">Provision a user through the SCIM endpoint and it will appear here.</p></div></div>
-		)}
-	</section>
+  <section class="mt-6 overflow-hidden rounded-lg border border-[#e4e4e7] bg-white shadow-xs">
+    {
+      users.length ? (
+        <div class="overflow-x-auto">
+          <table class="w-full min-w-[720px] border-collapse text-left">
+            <>
+              <thead class="bg-[#fafafa]">
+                <tr class="border-b border-[#e4e4e7] text-xs text-[#71717a]">
+                  <>
+                    <th class="h-10 px-4 font-medium">User</th>
+                    <th class="h-10 px-4 font-medium">Username</th>
+                    <th class="h-10 px-4 font-medium">External ID</th>
+                    <th class="h-10 px-4 font-medium">Status</th>
+                    <th class="h-10 px-4 text-right font-medium">Updated</th>
+                  </>
+                </tr>
+              </thead>
+              <tbody>
+                {users.map((user) => (
+                  <tr
+                    class="border-b border-[#e4e4e7] last:border-0 hover:bg-[#fafafa]"
+                    data-user-row
+                    data-search-value={`${user.display_name ?? ""} ${user.user_name} ${user.external_id ?? ""}`.toLowerCase()}
+                  >
+                    <td class="px-4 py-3">
+                      <div class="flex items-center gap-3">
+                        <span class="grid size-8 place-items-center rounded-full bg-[#f4f4f5] text-xs font-medium text-[#52525b]">
+                          {(user.display_name ?? user.user_name).slice(0, 1).toUpperCase()}
+                        </span>
+                        <span class="text-sm font-medium">{user.display_name ?? "Unnamed user"}</span>
+                      </div>
+                    </td>
+                    <td class="px-4 py-3 font-mono text-xs text-[#3f3f46]">{user.user_name}</td>
+                    <td class="px-4 py-3 font-mono text-xs text-[#71717a]">{user.external_id ?? "—"}</td>
+                    <td class="px-4 py-3">
+                      <span
+                        class:list={[
+                          "inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium",
+                          user.active
+                            ? "border-[#bbf7d0] bg-[#f0fdf4] text-[#15803d]"
+                            : "border-[#e4e4e7] bg-[#fafafa] text-[#71717a]",
+                        ]}
+                      >
+                        {user.active ? "Active" : "Inactive"}
+                      </span>
+                    </td>
+                    <td class="px-4 py-3 text-right text-xs text-[#71717a]">
+                      {user.updated_at.toLocaleString("en", { dateStyle: "medium", timeStyle: "short" })}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </>
+          </table>
+        </div>
+      ) : (
+        <div class="grid min-h-72 place-items-center px-6 py-12 text-center">
+          <div>
+            <>
+              <span class="mx-auto grid size-10 place-items-center rounded-md border border-[#e4e4e7] bg-[#fafafa] text-[#71717a]">
+                U
+              </span>
+              <h2 class="mt-4 text-sm font-semibold">No users yet</h2>
+              <p class="mt-1.5 max-w-sm text-sm leading-6 text-[#71717a]">
+                Provision a user through the SCIM endpoint and it will appear here.
+              </p>
+            </>
+          </div>
+        </div>
+      )
+    }
+  </section>
 </div>
 
 <script>
-	const user_search = document.querySelector<HTMLInputElement>('[data-user-search]');
-	user_search?.addEventListener('input', () => {
-		const query = user_search.value.trim().toLowerCase();
-		document.querySelectorAll<HTMLElement>('[data-user-row]').forEach((row) => { row.hidden = !String(row.dataset.searchValue).includes(query); });
-	});
+  const user_search = document.querySelector<HTMLInputElement>("[data-user-search]");
+  user_search?.addEventListener("input", () => {
+    const query = user_search.value.trim().toLowerCase();
+    document.querySelectorAll<HTMLElement>("[data-user-row]").forEach((row) => {
+      row.hidden = !String(row.dataset.searchValue).includes(query);
+    });
+  });
 </script>

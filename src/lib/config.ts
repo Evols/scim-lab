@@ -12,18 +12,9 @@ function required_value(name: string, development_fallback?: string): string {
 }
 
 export const app_config = {
-  database_url: required_value(
-    "DATABASE_URL",
-    "postgresql://postgres:postgres@localhost:5432/scim_lab",
-  ),
-  app_origin: required_value("APP_ORIGIN", "http://localhost:4321").replace(
-    /\/$/,
-    "",
-  ),
-  app_secret: required_value(
-    "APP_SECRET",
-    "scim-lab-development-secret-change-before-production",
-  ),
+  database_url: required_value("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/scim_lab"),
+  app_origin: required_value("APP_ORIGIN", "http://localhost:4321").replace(/\/$/, ""),
+  app_secret: required_value("APP_SECRET", "scim-lab-development-secret-change-before-production"),
   oidc_issuer_url: process.env.OIDC_ISSUER_URL?.trim() ?? "",
   oidc_client_id: process.env.OIDC_CLIENT_ID?.trim() ?? "",
   oidc_client_secret: process.env.OIDC_CLIENT_SECRET?.trim() ?? "",
@@ -31,9 +22,5 @@ export const app_config = {
 };
 
 export function oidc_is_configured(): boolean {
-  return Boolean(
-    app_config.oidc_issuer_url &&
-    app_config.oidc_client_id &&
-    app_config.oidc_client_secret,
-  );
+  return Boolean(app_config.oidc_issuer_url && app_config.oidc_client_id && app_config.oidc_client_secret);
 }

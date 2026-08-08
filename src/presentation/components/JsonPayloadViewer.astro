@@ -1,152 +1,212 @@
 ---
 interface Props {
-	label: string;
-	body: string | null;
-	tone: 'request' | 'response';
-	truncated?: boolean;
+  label: string;
+  body: string | null;
+  tone: "request" | "response";
+  truncated?: boolean;
 }
 
-type TokenKind = 'plain' | 'key' | 'string' | 'number' | 'literal';
+type TokenKind = "plain" | "key" | "string" | "number" | "literal";
 type Token = { value: string; kind: TokenKind };
 
 const { label, body, tone, truncated = false } = Astro.props;
 const raw_body = body?.trim() ? body : null;
-let formatted_body = raw_body ?? '';
+let formatted_body = raw_body ?? "";
 let is_json = false;
 
 if (raw_body) {
-	try {
-		formatted_body = JSON.stringify(JSON.parse(raw_body), null, 2);
-		is_json = true;
-	} catch {
-		// Keep non-JSON payloads readable as plain text.
-	}
+  try {
+    formatted_body = JSON.stringify(JSON.parse(raw_body), null, 2);
+    is_json = true;
+  } catch {
+    // Keep non-JSON payloads readable as plain text.
+  }
 }
 
-const lines = formatted_body.split('\n');
-const byte_length = new TextEncoder().encode(raw_body ?? '').length;
+const lines = formatted_body.split("\n");
+const byte_length = new TextEncoder().encode(raw_body ?? "").length;
 const size_label = byte_length < 1_000 ? `${byte_length} B` : `${(byte_length / 1_000).toFixed(1)} kB`;
 
 function tokenize(line: string): Token[] {
-	if (!is_json) {
-		return [{ value: line, kind: 'plain' }];
-	}
+  if (!is_json) {
+    return [{ value: line, kind: "plain" }];
+  }
 
-	const tokens: Token[] = [];
-	const pattern = /"(?:\\u[\da-fA-F]{4}|\\[^u]|[^\\"])*"|true|false|null|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?/g;
-	let cursor = 0;
+  const tokens: Token[] = [];
+  const pattern = /"(?:\\u[\da-fA-F]{4}|\\[^u]|[^\\"])*"|true|false|null|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?/g;
+  let cursor = 0;
 
-	for (const match of line.matchAll(pattern)) {
-		const index = match.index ?? 0;
-		if (index > cursor) {
-			tokens.push({ value: line.slice(cursor, index), kind: 'plain' });
-		}
+  for (const match of line.matchAll(pattern)) {
+    const index = match.index ?? 0;
+    if (index > cursor) {
+      tokens.push({ value: line.slice(cursor, index), kind: "plain" });
+    }
 
-		const value = match[0];
-		let kind: TokenKind = 'literal';
-		if (value.startsWith('"')) {
-			kind = line.slice(index + value.length).trimStart().startsWith(':') ? 'key' : 'string';
-		}
-		else if (/^-?\d/.test(value)) kind = 'number';
-		tokens.push({ value, kind });
-		cursor = index + value.length;
-	}
+    const value = match[0];
+    let kind: TokenKind = "literal";
+    if (value.startsWith('"')) {
+      kind = line
+        .slice(index + value.length)
+        .trimStart()
+        .startsWith(":")
+        ? "key"
+        : "string";
+    } else if (/^-?\d/.test(value)) kind = "number";
+    tokens.push({ value, kind });
+    cursor = index + value.length;
+  }
 
-	if (cursor < line.length) {
-		tokens.push({ value: line.slice(cursor), kind: 'plain' });
-	}
-	return tokens.length ? tokens : [{ value: ' ', kind: 'plain' }];
+  if (cursor < line.length) {
+    tokens.push({ value: line.slice(cursor), kind: "plain" });
+  }
+  return tokens.length ? tokens : [{ value: " ", kind: "plain" }];
 }
 
 const token_classes: Record<TokenKind, string> = {
-	plain: 'text-[#a1a1aa]',
-	key: 'text-[#93c5fd]',
-	string: 'text-[#86efac]',
-	number: 'text-[#fcd34d]',
-	literal: 'text-[#c4b5fd]',
+  plain: "text-[#a1a1aa]",
+  key: "text-[#93c5fd]",
+  string: "text-[#86efac]",
+  number: "text-[#fcd34d]",
+  literal: "text-[#c4b5fd]",
 };
-const tone_classes = tone === 'request'
-	? { mark: 'bg-[#eff6ff] text-[#2563eb] ring-[#dbeafe]', dot: 'bg-[#3b82f6]' }
-	: { mark: 'bg-[#f0fdf4] text-[#16a34a] ring-[#dcfce7]', dot: 'bg-[#22c55e]' };
+const tone_classes =
+  tone === "request"
+    ? { mark: "bg-[#eff6ff] text-[#2563eb] ring-[#dbeafe]", dot: "bg-[#3b82f6]" }
+    : { mark: "bg-[#f0fdf4] text-[#16a34a] ring-[#dcfce7]", dot: "bg-[#22c55e]" };
 ---
 
 <article class="overflow-hidden rounded-lg border border-[#d4d4d8] bg-white shadow-xs" data-payload-viewer>
-	<header class="flex min-h-12 flex-wrap items-center gap-x-3 gap-y-2 border-b border-[#e4e4e7] bg-white px-3 py-2.5 sm:px-4">
-		<div class:list={['grid size-7 shrink-0 place-items-center rounded-md text-[10px] font-bold tracking-wide ring-1 ring-inset', tone_classes.mark]}>
-			{tone === 'request' ? 'REQ' : 'RES'}
-		</div>
-		<div class="min-w-0 flex-1">
-			<div class="flex flex-wrap items-center gap-2">
-				<h3 class="text-xs font-semibold text-[#27272a]">{label}</h3>
-				{truncated && <span class="rounded-full bg-[#fffbeb] px-2 py-0.5 text-[10px] font-semibold text-[#a16207] ring-1 ring-inset ring-[#fde68a]">Truncated</span>}
-			</div>
-			{raw_body && <p class="mt-0.5 flex items-center gap-1.5 text-[10px] text-[#a1a1aa]"><span class:list={['size-1.5 rounded-full', tone_classes.dot]}></span>{is_json ? 'JSON' : 'Plain text'} <span aria-hidden="true">·</span> {lines.length} {lines.length === 1 ? 'line' : 'lines'} <span aria-hidden="true">·</span> {size_label}</p>}
-		</div>
-		{raw_body && (
-			<div class="ml-auto flex items-center gap-1">
-				<button class="h-7 cursor-pointer rounded-md px-2.5 text-[11px] font-medium text-[#52525b] transition hover:bg-[#f4f4f5] hover:text-[#18181b] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#a1a1aa]" type="button" data-payload-wrap aria-pressed="false">Wrap</button>
-				<button class="h-7 cursor-pointer rounded-md border border-[#e4e4e7] bg-white px-2.5 text-[11px] font-medium text-[#3f3f46] shadow-xs transition hover:bg-[#f4f4f5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#a1a1aa]" type="button" data-payload-copy>Copy</button>
-			</div>
-		)}
-	</header>
+  <header
+    class="flex min-h-12 flex-wrap items-center gap-x-3 gap-y-2 border-b border-[#e4e4e7] bg-white px-3 py-2.5 sm:px-4"
+  >
+    <div
+      class:list={[
+        "grid size-7 shrink-0 place-items-center rounded-md text-[10px] font-bold tracking-wide ring-1 ring-inset",
+        tone_classes.mark,
+      ]}
+    >
+      {tone === "request" ? "REQ" : "RES"}
+    </div>
+    <div class="min-w-0 flex-1">
+      <div class="flex flex-wrap items-center gap-2">
+        <h3 class="text-xs font-semibold text-[#27272a]">{label}</h3>
+        {
+          truncated && (
+            <span class="rounded-full bg-[#fffbeb] px-2 py-0.5 text-[10px] font-semibold text-[#a16207] ring-1 ring-inset ring-[#fde68a]">
+              Truncated
+            </span>
+          )
+        }
+      </div>
+      {
+        raw_body && (
+          <p class="mt-0.5 flex items-center gap-1.5 text-[10px] text-[#a1a1aa]">
+            <span class:list={["size-1.5 rounded-full", tone_classes.dot]} />
+            {is_json ? "JSON" : "Plain text"} <span aria-hidden="true">·</span> {lines.length}{" "}
+            {lines.length === 1 ? "line" : "lines"} <span aria-hidden="true">·</span> {size_label}
+          </p>
+        )
+      }
+    </div>
+    {
+      raw_body && (
+        <div class="ml-auto flex items-center gap-1">
+          <button
+            class="h-7 cursor-pointer rounded-md px-2.5 text-[11px] font-medium text-[#52525b] transition hover:bg-[#f4f4f5] hover:text-[#18181b] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#a1a1aa]"
+            type="button"
+            data-payload-wrap
+            aria-pressed="false"
+          >
+            Wrap
+          </button>
+          <button
+            class="h-7 cursor-pointer rounded-md border border-[#e4e4e7] bg-white px-2.5 text-[11px] font-medium text-[#3f3f46] shadow-xs transition hover:bg-[#f4f4f5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#a1a1aa]"
+            type="button"
+            data-payload-copy
+          >
+            Copy
+          </button>
+        </div>
+      )
+    }
+  </header>
 
-	{raw_body ? (
-		<div class="max-h-96 overflow-auto bg-[#111318] py-3" data-payload-scroll>
-			<pre class="m-0 min-w-max font-mono text-[11px] leading-6 sm:text-xs" data-payload-code><code>{lines.map((line, index) => (
-				<span class="grid min-h-6 grid-cols-[3rem_minmax(0,1fr)]" data-payload-line>
-					<span class="sticky left-0 z-10 select-none border-r border-white/5 bg-[#111318] pr-3 text-right text-[#52525b]" aria-hidden="true">{index + 1}</span>
-					<span class="whitespace-pre px-4" data-payload-line-content>{tokenize(line).map((token) => <span class={token_classes[token.kind]}>{token.value}</span>)}</span>
-				</span>
-			))}</code></pre>
-		</div>
-	) : (
-		<div class="grid min-h-44 place-items-center bg-[#111318] px-6 py-8 text-center">
-			<div>
-				<span class="mx-auto grid size-8 place-items-center rounded-full border border-white/10 bg-white/5 font-mono text-xs text-[#71717a]">∅</span>
-				<p class="mt-3 text-xs font-medium text-[#a1a1aa]">No {tone} body</p>
-				<p class="mt-1 text-[11px] text-[#52525b]">This exchange did not include a payload.</p>
-			</div>
-		</div>
-	)}
+  {
+    raw_body ? (
+      <div class="max-h-96 overflow-auto bg-[#111318] py-3" data-payload-scroll>
+        <pre class="m-0 min-w-max font-mono text-[11px] leading-6 sm:text-xs" data-payload-code>
+          <code>
+            {lines.map((line, index) => (
+              <span class="grid min-h-6 grid-cols-[3rem_minmax(0,1fr)]" data-payload-line>
+                <span
+                  class="sticky left-0 z-10 select-none border-r border-white/5 bg-[#111318] pr-3 text-right text-[#52525b]"
+                  aria-hidden="true"
+                >
+                  {index + 1}
+                </span>
+                <span class="whitespace-pre px-4" data-payload-line-content>
+                  {tokenize(line).map((token) => (
+                    <span class={token_classes[token.kind]}>{token.value}</span>
+                  ))}
+                </span>
+              </span>
+            ))}
+          </code>
+        </pre>
+      </div>
+    ) : (
+      <div class="grid min-h-44 place-items-center bg-[#111318] px-6 py-8 text-center">
+        <div>
+          <span class="mx-auto grid size-8 place-items-center rounded-full border border-white/10 bg-white/5 font-mono text-xs text-[#71717a]">
+            ∅
+          </span>
+          <p class="mt-3 text-xs font-medium text-[#a1a1aa]">No {tone} body</p>
+          <p class="mt-1 text-[11px] text-[#52525b]">This exchange did not include a payload.</p>
+        </div>
+      </div>
+    )
+  }
 
-	<textarea class="sr-only" tabindex="-1" aria-hidden="true" data-payload-source>{formatted_body}</textarea>
+  <textarea class="sr-only" tabindex="-1" aria-hidden="true" data-payload-source>{formatted_body}</textarea>
 </article>
 
 <style>
-	[data-payload-viewer][data-wrapped='true'] [data-payload-code] {
-		min-width: 0;
-	}
+  [data-payload-viewer][data-wrapped="true"] [data-payload-code] {
+    min-width: 0;
+  }
 
-	[data-payload-viewer][data-wrapped='true'] [data-payload-line-content] {
-		white-space: pre-wrap;
-		overflow-wrap: anywhere;
-	}
+  [data-payload-viewer][data-wrapped="true"] [data-payload-line-content] {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
 </style>
 
 <script>
-	document.querySelectorAll<HTMLElement>('[data-payload-viewer]').forEach((viewer) => {
-		if (viewer.dataset.enhanced) {
-			return;
-		}
-		viewer.dataset.enhanced = 'true';
+  document.querySelectorAll<HTMLElement>("[data-payload-viewer]").forEach((viewer) => {
+    if (viewer.dataset.enhanced) {
+      return;
+    }
+    viewer.dataset.enhanced = "true";
 
-		const wrap_button = viewer.querySelector<HTMLButtonElement>('[data-payload-wrap]');
-		wrap_button?.addEventListener('click', () => {
-			const wrapped = viewer.dataset.wrapped !== 'true';
-			viewer.dataset.wrapped = String(wrapped);
-			wrap_button.setAttribute('aria-pressed', String(wrapped));
-			wrap_button.textContent = wrapped ? 'Unwrap' : 'Wrap';
-		});
+    const wrap_button = viewer.querySelector<HTMLButtonElement>("[data-payload-wrap]");
+    wrap_button?.addEventListener("click", () => {
+      const wrapped = viewer.dataset.wrapped !== "true";
+      viewer.dataset.wrapped = String(wrapped);
+      wrap_button.setAttribute("aria-pressed", String(wrapped));
+      wrap_button.textContent = wrapped ? "Unwrap" : "Wrap";
+    });
 
-		const copy_button = viewer.querySelector<HTMLButtonElement>('[data-payload-copy]');
-		const source = viewer.querySelector<HTMLTextAreaElement>('[data-payload-source]');
-		copy_button?.addEventListener('click', async () => {
-			if (!source) {
-				return;
-			}
-			await navigator.clipboard.writeText(source.value);
-			copy_button.textContent = 'Copied';
-			window.setTimeout(() => { copy_button.textContent = 'Copy'; }, 1400);
-		});
-	});
+    const copy_button = viewer.querySelector<HTMLButtonElement>("[data-payload-copy]");
+    const source = viewer.querySelector<HTMLTextAreaElement>("[data-payload-source]");
+    copy_button?.addEventListener("click", async () => {
+      if (!source) {
+        return;
+      }
+      await navigator.clipboard.writeText(source.value);
+      copy_button.textContent = "Copied";
+      window.setTimeout(() => {
+        copy_button.textContent = "Copy";
+      }, 1400);
+    });
+  });
 </script>

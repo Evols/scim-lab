@@ -1,32 +1,20 @@
 import * as z from "zod";
 import { scim_error } from "./error.ts";
 
-type BodyValidationResult<T> =
-  { success: true; data: T } | { success: false; response: Response };
+type BodyValidationResult<T> = { success: true; data: T } | { success: false; response: Response };
 
 function invalid_structure(error: z.ZodError): Response {
   const issue = error.issues[0];
   const path = issue?.path.length ? ` at ${issue.path.join(".")}` : "";
   const reason = issue?.message ?? "The request body has an invalid structure.";
-  return scim_error(
-    400,
-    `Request body is structurally invalid${path}: ${reason}`,
-    "invalidValue",
-  );
+  return scim_error(400, `Request body is structurally invalid${path}: ${reason}`, "invalidValue");
 }
 
-export function validate_json_body<S extends z.ZodType>(
-  body: string,
-  schema: S,
-): BodyValidationResult<z.output<S>> {
+export function validate_json_body<S extends z.ZodType>(body: string, schema: S): BodyValidationResult<z.output<S>> {
   if (!body) {
     return {
       success: false,
-      response: scim_error(
-        400,
-        "A valid JSON object is required.",
-        "invalidSyntax",
-      ),
+      response: scim_error(400, "A valid JSON object is required.", "invalidSyntax"),
     };
   }
 
@@ -36,21 +24,13 @@ export function validate_json_body<S extends z.ZodType>(
   } catch {
     return {
       success: false,
-      response: scim_error(
-        400,
-        "A valid JSON object is required.",
-        "invalidSyntax",
-      ),
+      response: scim_error(400, "A valid JSON object is required.", "invalidSyntax"),
     };
   }
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
     return {
       success: false,
-      response: scim_error(
-        400,
-        "The request body must be a JSON object.",
-        "invalidSyntax",
-      ),
+      response: scim_error(400, "The request body must be a JSON object.", "invalidSyntax"),
     };
   }
 

@@ -35,10 +35,7 @@ export const POST: APIRoute = async ({ cookies, request, url }) => {
   } catch (error) {
     return json(
       {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Unable to reveal the credential.",
+        error: error instanceof Error ? error.message : "Unable to reveal the credential.",
       },
       404,
     );

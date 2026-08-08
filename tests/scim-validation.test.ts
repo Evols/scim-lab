@@ -1,12 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { validate_json_body } from "../src/lib/scim/api/body.ts";
 import { json_response } from "../src/lib/scim/api/response.ts";
-import {
-  GroupWriteSchema,
-  PatchRequestSchema,
-  UserResourceSchema,
-  UserWriteSchema,
-} from "../src/lib/scim/schemas.ts";
+import { GroupWriteSchema, PatchRequestSchema, UserResourceSchema, UserWriteSchema } from "../src/lib/scim/schemas.ts";
 
 async function error_payload(result: ReturnType<typeof validate_json_body>) {
   if (result.success) {
@@ -27,10 +22,7 @@ describe("SCIM request structure validation", () => {
   });
 
   it("maps invalid core attribute shapes to invalidValue", async () => {
-    const result = validate_json_body(
-      JSON.stringify({ userName: 42 }),
-      UserWriteSchema,
-    );
+    const result = validate_json_body(JSON.stringify({ userName: 42 }), UserWriteSchema);
     const error = await error_payload(result);
 
     expect(error.scimType).toBe("invalidValue");
@@ -38,8 +30,7 @@ describe("SCIM request structure validation", () => {
   });
 
   it("preserves unknown SCIM extensions", () => {
-    const extension =
-      "urn:example:params:scim:schemas:extension:Custom:2.0:User";
+    const extension = "urn:example:params:scim:schemas:extension:Custom:2.0:User";
     const result = validate_json_body(
       JSON.stringify({
         userName: "ada@example.com",
@@ -70,10 +61,7 @@ describe("SCIM request structure validation", () => {
   });
 
   it("requires group members to have a string value", async () => {
-    const result = validate_json_body(
-      JSON.stringify({ members: [{ display: "Ada" }] }),
-      GroupWriteSchema,
-    );
+    const result = validate_json_body(JSON.stringify({ members: [{ display: "Ada" }] }), GroupWriteSchema);
     const error = await error_payload(result);
 
     expect(error.scimType).toBe("invalidValue");

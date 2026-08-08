@@ -1,33 +1,35 @@
 ---
-import '../styles/global.css';
+import "../styles/global.css";
 
 interface Props {
-	title?: string;
-	description?: string;
+  title?: string;
+  description?: string;
 }
 
 const {
-	title = 'SCIM Lab — Provisioning without the ceremony',
-	description = 'Create a working SCIM v2 server in seconds, inspect every request, and test identity provisioning safely.',
+  title = "SCIM Lab — Provisioning without the ceremony",
+  description = "Create a working SCIM v2 server in seconds, inspect every request, and test identity provisioning safely.",
 } = Astro.props;
 ---
 
 <!doctype html>
 <html lang="en" class="min-h-full bg-[#fafafa]">
-	<head>
-		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1" />
-		<meta name="theme-color" content="#ffffff" />
-		<meta name="description" content={description} />
-		<link rel="icon" href="/favicon.ico" />
-		<meta name="generator" content={Astro.generator} />
-		<meta property="og:type" content="website" />
-		<meta property="og:title" content={title} />
-		<meta property="og:description" content={description} />
-		<meta name="twitter:card" content="summary" />
-		<title>{title}</title>
-	</head>
-	<body class="min-h-screen min-w-80 bg-[#fafafa] font-sans text-[#09090b] antialiased selection:bg-[#e4e4e7] selection:text-[#09090b]">
-		<slot />
-	</body>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#ffffff" />
+    <meta name="description" content={description} />
+    <link rel="icon" href="/favicon.ico" />
+    <meta name="generator" content={Astro.generator} />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta name="twitter:card" content="summary" />
+    <title>{title}</title>
+  </head>
+  <body
+    class="min-h-screen min-w-80 bg-[#fafafa] font-sans text-[#09090b] antialiased selection:bg-[#e4e4e7] selection:text-[#09090b]"
+  >
+    <slot />
+  </body>
 </html>
