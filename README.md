@@ -1,46 +1,60 @@
-# Astro Starter Kit: Basics
+# SCIM Lab
+
+SCIM Lab is a self-hosted SCIM v2 sandbox. The first visit creates a working anonymous server, a bearer token, and a Postgres-backed store for Users, Groups, and verbose request logs.
+
+## Requirements
+
+- Node.js 22.12 or newer
+- pnpm 10
+- PostgreSQL 13 or newer
+- An OpenID Connect provider for durable accounts and sharing (anonymous use works without it)
+
+## Local setup
+
+Create the database using your local Postgres instance:
 
 ```sh
-pnpm create astro@latest -- --template basics
+createdb -U postgres scim_lab
 ```
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+Copy `.env.example` to `.env` and set a random `APP_SECRET` of at least 32 bytes. The included database URL assumes the local username and password are both `postgres`:
 
-## 🚀 Project Structure
-
-Inside of your Astro project, you'll see the following folders and files:
-
-```text
-/
-├── public/
-│   └── favicon.svg
-├── src
-│   ├── assets
-│   │   └── astro.svg
-│   ├── components
-│   │   └── Welcome.astro
-│   ├── layouts
-│   │   └── Layout.astro
-│   └── pages
-│       └── index.astro
-└── package.json
+```dotenv
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/scim_lab
+APP_ORIGIN=http://localhost:4321
+APP_SECRET=replace-with-at-least-32-random-bytes
+OIDC_ISSUER_URL=http://localhost:8080/realms/scim-lab
+OIDC_CLIENT_ID=scim-lab
+OIDC_CLIENT_SECRET=replace-with-your-oidc-client-secret
 ```
 
-To learn more about the folder structure of an Astro project, refer to [our guide on project structure](https://docs.astro.build/en/basics/project-structure/).
+Register `${APP_ORIGIN}/auth/callback` as the OIDC redirect URI, then install, migrate, and start:
 
-## 🧞 Commands
+```sh
+pnpm install
+pnpm db:migrate
+pnpm astro dev --background
+```
 
-All commands are run from the root of the project, from a terminal:
+Use `pnpm astro dev status`, `pnpm astro dev logs`, and `pnpm astro dev stop` to manage the background server.
 
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `pnpm install`             | Installs dependencies                            |
-| `pnpm dev`             | Starts local dev server at `localhost:4321`      |
-| `pnpm build`           | Build your production site to `./dist/`          |
-| `pnpm preview`         | Preview your build locally, before deploying     |
-| `pnpm astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `pnpm astro -- --help` | Get help using the Astro CLI                     |
+## Production
 
-## 👀 Want to learn more?
+Build and run the standalone Astro Node server behind an HTTPS reverse proxy:
 
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+```sh
+pnpm build
+HOST=0.0.0.0 PORT=4321 pnpm start
+```
+
+Run `pnpm db:migrate` before starting a new release. Keep `APP_SECRET`, `OIDC_CLIENT_SECRET`, and `DATABASE_URL` out of source control.
+
+## Supported SCIM surface
+
+- Users and Groups: GET, POST, PUT, PATCH, DELETE
+- Filtering, one-based pagination, and Group membership
+- ServiceProviderConfig, Schemas, and ResourceTypes discovery
+- Bearer token or HTTP Basic authentication, one active mode per server
+- 100 users and 1,000 retained events per server; events expire after 30 days
+
+Bulk, sorting, ETags, enterprise extensions, and custom schemas are intentionally deferred.

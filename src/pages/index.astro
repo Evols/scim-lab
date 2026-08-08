@@ -1,79 +1,90 @@
 ---
-import AppFooter from '../components/AppFooter.astro';
 import AppHeader from '../components/AppHeader.astro';
-import IntroSection from '../components/IntroSection.astro';
-import ProgressCard from '../components/ProgressCard.astro';
-import TaskCard from '../components/TaskCard.astro';
-import { clear_completed_tasks, create_task, delete_task, list_tasks, set_task_completed } from '../db';
+import EndpointView from '../components/EndpointView.astro';
+import FlashNotice from '../components/FlashNotice.astro';
+import GroupsPanel from '../components/GroupsPanel.astro';
+import LogsPanel from '../components/LogsPanel.astro';
+import SettingsPanel from '../components/SettingsPanel.astro';
+import UsersPanel from '../components/UsersPanel.astro';
+import {
+	get_server_lifecycle,
+	list_console_events,
+	list_console_groups,
+	list_console_users,
+	list_servers_for_user,
+	list_share_invites,
+	mark_server_deactivated,
+	read_server_credential,
+	touch_server_console,
+} from '../db';
 import Layout from '../layouts/Layout.astro';
+import { get_console_context, get_flash } from '../lib/console_context';
 
 export const prerender = false;
 
-type task_filter = 'all' | 'active' | 'done';
+const context = await get_console_context(Astro.cookies);
+const server_rows = await list_servers_for_user(context.user.id);
+const requested_server_id = Astro.url.searchParams.get('server');
+const selected_access = server_rows.find(({ server }) => server.id === requested_server_id) ?? server_rows[0];
+let lifecycle = selected_access ? get_server_lifecycle(selected_access.server, selected_access.creator.is_anonymous) : null;
 
-async function handle_post(): Promise<Response | undefined> {
-	if (Astro.request.method !== 'POST') return;
-
-	const origin = Astro.request.headers.get('origin');
-	if (origin && origin !== Astro.url.origin) return new Response('Invalid request origin.', { status: 403 });
-
-	const form = await Astro.request.formData();
-	const intent = String(form.get('intent') ?? '');
-	const filter = String(form.get('filter') ?? 'all');
-
-	if (intent === 'create') {
-		const title = String(form.get('title') ?? '').trim().replace(/\s+/g, ' ');
-		if (title) await create_task(title.slice(0, 160));
-	}
-
-	if (intent === 'toggle') {
-		const id = String(form.get('id') ?? '');
-		if (id) await set_task_completed(id, form.get('completed') === 'true');
-	}
-
-	if (intent === 'delete') {
-		const id = String(form.get('id') ?? '');
-		if (id) await delete_task(id);
-	}
-
-	if (intent === 'clear') await clear_completed_tasks();
-	const selected_filter = filter === 'active' || filter === 'done' ? filter : 'all';
-	const redirect_path = selected_filter === 'all' ? '/' : `/?filter=${selected_filter}`;
-	return Astro.redirect(redirect_path, 303);
+if (selected_access && lifecycle !== 'active') {
+	selected_access.server = await mark_server_deactivated(selected_access.server, selected_access.creator.is_anonymous);
+	lifecycle = get_server_lifecycle(selected_access.server, selected_access.creator.is_anonymous);
+} else if (selected_access) {
+	await touch_server_console(selected_access.server.id);
 }
 
-const post_response = await handle_post();
-if (post_response) return post_response;
+const allowed_views = ['overview', 'users', 'groups', 'logs', 'settings'];
+const requested_view = Astro.url.searchParams.get('view') ?? 'overview';
+const view = allowed_views.includes(requested_view) ? requested_view : 'overview';
+const status_filter = Astro.url.searchParams.get('status') ?? '';
+const method_filter = Astro.url.searchParams.get('method') ?? '';
 
-const requested_filter = Astro.url.searchParams.get('filter');
-const filter: task_filter = requested_filter === 'active' || requested_filter === 'done' ? requested_filter : 'all';
-const tasks = await list_tasks();
-const active_count = tasks.filter((task) => !task.completed).length;
-const done_count = tasks.length - active_count;
-const visible_tasks = tasks.filter((task) => {
-	if (filter === 'active') return !task.completed;
-	if (filter === 'done') return task.completed;
-	return true;
-});
-const progress = tasks.length === 0 ? 0 : Math.round((done_count / tasks.length) * 100);
-const today = new Intl.DateTimeFormat('en', {
-	weekday: 'long',
-	month: 'short',
-	day: 'numeric',
-	timeZone: 'Europe/Paris',
-}).format(new Date());
+const flash = await get_flash(Astro.cookies, context.user.id);
+
+const selected_server = selected_access?.server;
+const allow_create = !context.user.is_anonymous && server_rows.filter(({ server }) => server.created_by_user_id === context.user.id).length < 3;
+const anonymous_credential = selected_server && context.user.is_anonymous && lifecycle === 'active'
+	? await read_server_credential(context.user.id, selected_server.id).catch(() => null)
+	: null;
+const [users, groups, events, invites] = selected_server ? await Promise.all([
+	view === 'users' ? list_console_users(selected_server.id) : Promise.resolve([]),
+	view === 'groups' ? list_console_groups(selected_server.id) : Promise.resolve([]),
+	view === 'logs' ? list_console_events(selected_server.id, status_filter, method_filter) : Promise.resolve([]),
+	view === 'settings' ? list_share_invites(selected_server.id) : Promise.resolve([]),
+]) : [[], [], [], []];
 ---
 
 <Layout>
-	<div class="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_9%_12%,rgba(116,160,114,0.1),transparent_26rem)]" aria-hidden="true"></div>
-	<div class="pointer-events-none fixed inset-0 bg-[linear-gradient(rgba(32,35,30,0.026)_1px,transparent_1px)] bg-[length:100%_32px]" aria-hidden="true"></div>
-	<div class="relative z-10 mx-auto flex min-h-screen w-[min(calc(100%_-_24px),1040px)] flex-col md:w-[min(calc(100%_-_40px),1040px)]">
-		<AppHeader today={today} />
-		<main class="flex-1 py-9 md:py-[66px] md:pb-12">
-			<IntroSection />
-			<TaskCard filter={filter} tasks={visible_tasks} total_count={tasks.length} active_count={active_count} done_count={done_count} />
-			<ProgressCard progress={progress} done_count={done_count} total_count={tasks.length} active_count={active_count} />
+	<AppHeader user={context.user} servers={server_rows} selected_server={selected_server} view={view} allow_create={allow_create} selected_lifecycle={lifecycle} />
+	{flash && <FlashNotice flash={flash} />}
+
+	{!selected_server ? (
+		<main class="grid min-h-[calc(100vh-3.5rem)] place-items-center px-4 py-16"><section class="w-full max-w-md rounded-lg border border-[#e4e4e7] bg-white p-6 text-center shadow-sm"><div class="mx-auto grid size-10 place-items-center rounded-md border border-[#e4e4e7] bg-[#fafafa] text-lg">+</div><h1 class="mt-4 text-xl font-semibold tracking-[-0.025em]">Create a SCIM server</h1><p class="mt-2 text-sm leading-6 text-[#71717a]">Your endpoint and bearer token will be ready immediately.</p>{context.user.is_anonymous ? <a class="mt-5 inline-flex h-9 items-center rounded-md bg-[#18181b] px-4 text-sm font-medium text-white no-underline" href="/auth/login">Sign in to continue</a> : <form class="mt-5 flex gap-2" action="/api/console" method="POST"><input type="hidden" name="intent" value="create_server"/><input class="h-9 min-w-0 flex-1 rounded-md border border-[#d4d4d8] px-3 text-sm shadow-xs" name="name" value="Provisioning sandbox" required/><button class="h-9 rounded-md bg-[#18181b] px-4 text-sm font-medium text-white" type="submit">Create</button></form>}</section></main>
+	) : lifecycle !== 'active' ? (
+		<main class="grid min-h-[calc(100vh-3.5rem)] place-items-center px-4 py-16"><section class="w-full max-w-md rounded-lg border border-[#e4e4e7] bg-white p-6 text-center shadow-sm"><span class="mx-auto grid size-10 place-items-center rounded-full bg-[#fef3c7] text-sm text-[#a16207]">Ⅱ</span><h1 class="mt-4 text-xl font-semibold tracking-[-0.025em]">Server deactivated</h1><p class="mt-2 text-sm leading-6 text-[#71717a]">SCIM requests are paused because this console was inactive.</p>{context.user.is_anonymous ? <a class="mt-5 inline-flex h-9 items-center rounded-md bg-[#18181b] px-4 text-sm font-medium text-white no-underline" href="/auth/login">Sign in to reactivate</a> : lifecycle === 'deactivated' ? <form class="mt-5" action="/api/console" method="POST"><input type="hidden" name="intent" value="reactivate_server"/><input type="hidden" name="server_id" value={selected_server.id}/><button class="h-9 cursor-pointer rounded-md bg-[#18181b] px-4 text-sm font-medium text-white" type="submit">Reactivate</button></form> : <p class="mt-4 text-sm font-medium text-[#dc2626]">The recovery window has expired.</p>}</section></main>
+	) : view === 'overview' ? (
+		<EndpointView server={selected_server} origin={Astro.url.origin} is_anonymous={context.user.is_anonymous} anonymous_credential={anonymous_credential} />
+	) : (
+		<main class="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
+			{view === 'users' && <UsersPanel users={users} />}
+			{view === 'groups' && <GroupsPanel groups={groups} />}
+			{view === 'logs' && <LogsPanel events={events} server_id={selected_server.id} status_filter={status_filter} method_filter={method_filter} />}
+			{view === 'settings' && <SettingsPanel server={selected_server} invites={invites} is_anonymous={context.user.is_anonymous} />}
 		</main>
-		<AppFooter />
-	</div>
+	)}
+
+	<script>
+		document.querySelectorAll<HTMLElement>('[data-copy]').forEach((button) => {
+			button.addEventListener('click', async () => {
+				const value = button.dataset.copy;
+				if (!value) return;
+				await navigator.clipboard.writeText(value);
+				const previous = button.textContent;
+				button.textContent = 'Copied';
+				window.setTimeout(() => { button.textContent = previous; }, 1400);
+			});
+		});
+	</script>
 </Layout>

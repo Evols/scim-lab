@@ -1,0 +1,104 @@
+---
+import type { scim_server_record } from '../db/schema';
+import type { server_credential } from '../db';
+
+interface Props {
+	server: scim_server_record;
+	origin: string;
+	is_anonymous: boolean;
+	anonymous_credential?: server_credential | null;
+}
+
+const { server, origin, is_anonymous, anonymous_credential = null } = Astro.props;
+const endpoint = `${origin}/scim/${server.id}/v2`;
+const credential_label = anonymous_credential?.auth_mode === 'basic' ? 'Password' : 'Bearer token';
+---
+
+<main class="grid min-h-[calc(100vh-3.5rem)] place-items-center px-4 py-16">
+	<section class="w-full max-w-3xl text-center" aria-labelledby="landing-title">
+		<div class="mx-auto mb-5 inline-flex items-center gap-2 rounded-full border border-[#e4e4e7] bg-white px-3 py-1 text-xs font-medium text-[#52525b] shadow-xs"><span class="size-1.5 rounded-full bg-[#22c55e]"></span>Live SCIM v2 server</div>
+		<h1 id="landing-title" class="mx-auto max-w-2xl text-balance text-4xl font-semibold tracking-[-0.045em] text-[#09090b] sm:text-5xl">A working SCIM server, before you even sign in.</h1>
+		<p class="mx-auto mt-4 max-w-xl text-pretty text-base leading-7 text-[#71717a]">Point your identity provider at the URL below. Users, groups, and every request are stored locally and ready to inspect.</p>
+
+		<div class="mt-10 space-y-3 text-left">
+			<div>
+				<p id="endpoint-label" class="mb-2.5 text-sm font-medium text-[#3f3f46]">SCIM base URL</p>
+				<div class="flex min-h-12 items-center gap-2 rounded-lg border border-[#d4d4d8] bg-white p-1.5 pl-4 shadow-sm transition focus-within:border-[#a1a1aa] focus-within:ring-2 focus-within:ring-[#e4e4e7]">
+					<code class="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap font-mono text-[13px] text-[#27272a] sm:text-sm">{endpoint}</code>
+					<button class="h-9 shrink-0 cursor-pointer rounded-md border border-[#e4e4e7] bg-white px-3 text-xs font-medium text-[#3f3f46] shadow-xs hover:bg-[#f4f4f5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a1a1aa]" type="button" data-copy={endpoint}>Copy</button>
+				</div>
+			</div>
+
+			{is_anonymous ? (
+				<div class="rounded-lg border border-[#e4e4e7] bg-white p-4 shadow-sm">
+					<div class="mb-3 flex items-center justify-between gap-3"><div><p class="text-sm font-medium text-[#27272a]">Authentication</p><p class="mt-0.5 text-xs text-[#71717a]">Use this with the endpoint above.</p></div><span class="rounded-full border border-[#e4e4e7] bg-[#fafafa] px-2.5 py-1 text-xs font-medium capitalize text-[#52525b]">{anonymous_credential?.auth_mode ?? server.auth_mode}</span></div>
+					{anonymous_credential ? (
+						<div class="space-y-3">
+							{anonymous_credential.username && <div><p class="mb-1.5 text-xs font-medium text-[#71717a]">Username</p><div class="flex items-center gap-2 rounded-md border border-[#e4e4e7] bg-[#fafafa] p-1.5 pl-3"><code class="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap font-mono text-xs text-[#27272a]">{anonymous_credential.username}</code><button class="h-8 shrink-0 cursor-pointer rounded-md border border-[#e4e4e7] bg-white px-3 text-xs font-medium shadow-xs hover:bg-[#f4f4f5]" type="button" data-copy={anonymous_credential.username}>Copy</button></div></div>}
+							<div><p class="mb-1.5 text-xs font-medium text-[#71717a]">{credential_label}</p><div class="flex items-center gap-2 rounded-md border border-[#e4e4e7] bg-[#fafafa] p-1.5 pl-3"><code class="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap font-mono text-xs text-[#27272a]">{anonymous_credential.credential}</code><button class="h-8 shrink-0 cursor-pointer rounded-md border border-[#e4e4e7] bg-white px-3 text-xs font-medium shadow-xs hover:bg-[#f4f4f5]" type="button" data-copy={anonymous_credential.credential}>Copy</button></div></div>
+						</div>
+					) : <p class="rounded-md bg-[#fef2f2] px-3 py-2 text-xs text-[#b91c1c]">This server needs a credential refresh. Generate a new one in Settings.</p>}
+				</div>
+			) : (
+				<div class="rounded-lg border border-[#e4e4e7] bg-white p-4 shadow-sm" data-credential-card data-server-id={server.id}>
+					<div class="flex items-center justify-between gap-4"><div><p class="text-sm font-medium text-[#27272a]">Authentication credential</p><p class="mt-0.5 text-xs text-[#71717a]">Encrypted at rest. Reveal it when you need to configure a client.</p></div><button class="h-9 shrink-0 cursor-pointer rounded-md border border-[#d4d4d8] bg-white px-3 text-xs font-medium text-[#27272a] shadow-xs hover:bg-[#f4f4f5] disabled:cursor-wait disabled:opacity-60" type="button" data-reveal-credential>Reveal credential</button></div>
+					<p class="mt-3 hidden rounded-md bg-[#fef2f2] px-3 py-2 text-xs text-[#b91c1c]" role="alert" data-credential-error></p>
+					<div class="mt-4 hidden space-y-3 border-t border-[#e4e4e7] pt-4" data-credential-fields>
+						<div class="hidden" data-username-row><p class="mb-1.5 text-xs font-medium text-[#71717a]">Username</p><div class="flex items-center gap-2 rounded-md border border-[#e4e4e7] bg-[#fafafa] p-1.5 pl-3"><code class="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap font-mono text-xs text-[#27272a]" data-credential-username></code><button class="h-8 shrink-0 cursor-pointer rounded-md border border-[#e4e4e7] bg-white px-3 text-xs font-medium shadow-xs hover:bg-[#f4f4f5]" type="button" data-copy>Copy</button></div></div>
+						<div><p class="mb-1.5 text-xs font-medium text-[#71717a]" data-credential-label>Bearer token</p><div class="flex items-center gap-2 rounded-md border border-[#e4e4e7] bg-[#fafafa] p-1.5 pl-3"><code class="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap font-mono text-xs text-[#27272a]" data-credential-value></code><button class="h-8 shrink-0 cursor-pointer rounded-md border border-[#e4e4e7] bg-white px-3 text-xs font-medium shadow-xs hover:bg-[#f4f4f5]" type="button" data-copy>Copy</button></div></div>
+					</div>
+				</div>
+			)}
+
+			{is_anonymous && <p class="pt-0.5 text-xs text-[#a1a1aa]">Available for 7 days anonymously. Sign in to keep it.</p>}
+		</div>
+	</section>
+</main>
+
+<script>
+	const credential_card = document.querySelector<HTMLElement>('[data-credential-card]');
+	const reveal_button = credential_card?.querySelector<HTMLButtonElement>('[data-reveal-credential]');
+	const credential_fields = credential_card?.querySelector<HTMLElement>('[data-credential-fields]');
+	const credential_error = credential_card?.querySelector<HTMLElement>('[data-credential-error]');
+
+	reveal_button?.addEventListener('click', async () => {
+		if (!credential_card || !credential_fields || !credential_error) return;
+		if (credential_card.dataset.loaded === 'true') {
+			const will_hide = !credential_fields.classList.contains('hidden');
+			credential_fields.classList.toggle('hidden', will_hide);
+			reveal_button.textContent = will_hide ? 'Reveal credential' : 'Hide credential';
+			return;
+		}
+		reveal_button.disabled = true;
+		reveal_button.textContent = 'Revealing…';
+		credential_error.classList.add('hidden');
+		try {
+			const form = new FormData();
+			form.set('server_id', credential_card.dataset.serverId ?? '');
+			const response = await fetch('/api/credential', { method: 'POST', body: form });
+			const result = await response.json() as { auth_mode?: string; username?: string | null; credential?: string; error?: string };
+			if (!response.ok || !result.credential) throw new Error(result.error ?? 'Unable to reveal the credential.');
+			const username_row = credential_card.querySelector<HTMLElement>('[data-username-row]');
+			const username_value = credential_card.querySelector<HTMLElement>('[data-credential-username]');
+			const credential_value = credential_card.querySelector<HTMLElement>('[data-credential-value]');
+			const credential_label_element = credential_card.querySelector<HTMLElement>('[data-credential-label]');
+			if (username_row && username_value) {
+				username_row.classList.toggle('hidden', !result.username);
+				username_value.textContent = result.username ?? '';
+				username_row.querySelector<HTMLElement>('[data-copy]')!.dataset.copy = result.username ?? '';
+			}
+			if (credential_value) credential_value.textContent = result.credential;
+			if (credential_label_element) credential_label_element.textContent = result.auth_mode === 'basic' ? 'Password' : 'Bearer token';
+			credential_value?.parentElement?.querySelector<HTMLElement>('[data-copy]')?.setAttribute('data-copy', result.credential);
+			credential_card.dataset.loaded = 'true';
+			credential_fields.classList.remove('hidden');
+			reveal_button.textContent = 'Hide credential';
+		} catch (error) {
+			credential_error.textContent = error instanceof Error ? error.message : 'Unable to reveal the credential.';
+			credential_error.classList.remove('hidden');
+			reveal_button.textContent = 'Try again';
+		} finally {
+			reveal_button.disabled = false;
+		}
+	});
+</script>

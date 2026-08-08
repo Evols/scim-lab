@@ -7,33 +7,27 @@ interface Props {
 }
 
 const {
-	title = 'Tempo — Make today count',
-	description = 'A calm, focused task list for getting the right things done.',
+	title = 'SCIM Lab — Provisioning without the ceremony',
+	description = 'Create a working SCIM v2 server in seconds, inspect every request, and test identity provisioning safely.',
 } = Astro.props;
 ---
 
 <!doctype html>
-<html lang="en" class="min-h-full bg-[#f4f1e8]">
+<html lang="en" class="min-h-full bg-[#fafafa]">
 	<head>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
-		<meta name="theme-color" content="#f4f1e8" />
+		<meta name="theme-color" content="#ffffff" />
 		<meta name="description" content={description} />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 		<link rel="icon" href="/favicon.ico" />
-		<link rel="preconnect" href="https://fonts.googleapis.com" />
-		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-		<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
 		<meta name="generator" content={Astro.generator} />
 		<meta property="og:type" content="website" />
 		<meta property="og:title" content={title} />
 		<meta property="og:description" content={description} />
-		<meta property="og:image" content={new URL('/og.png', Astro.url.origin)} />
-		<meta name="twitter:card" content="summary_large_image" />
-		<meta name="twitter:image" content={new URL('/og.png', Astro.url.origin)} />
+		<meta name="twitter:card" content="summary" />
 		<title>{title}</title>
 	</head>
-	<body class="min-h-screen min-w-80 bg-[#f4f1e8] font-[Manrope] text-[#20231e] antialiased selection:bg-[#b8eabf] selection:text-[#162019]">
+	<body class="min-h-screen min-w-80 bg-[#fafafa] font-sans text-[#09090b] antialiased selection:bg-[#e4e4e7] selection:text-[#09090b]">
 		<slot />
 	</body>
 </html>

@@ -1,0 +1,36 @@
+---
+import * as database from '../../db';
+import Layout from '../../layouts/Layout.astro';
+import { get_console_context } from '../../lib/console_context';
+
+export const prerender = false;
+
+const token = String(Astro.params.token ?? '');
+const context = await get_console_context(Astro.cookies);
+const invite = await database.get_share_invite(token);
+let error_message = invite ? '' : 'This sharing link is invalid, revoked, or expired.';
+
+if (Astro.request.method === 'POST' && invite && !context.user.is_anonymous) {
+	const origin = Astro.request.headers.get('origin');
+	if (origin && origin !== Astro.url.origin) return new Response('Invalid request origin.', { status: 403 });
+	try {
+		return Astro.redirect(`/?server=${await database.accept_share_invite(context.user.id, token)}`, 303);
+	} catch (error) {
+		error_message = error instanceof Error ? error.message : 'The sharing link could not be accepted.';
+	}
+}
+---
+
+<Layout title="Join a SCIM server — SCIM Lab" description="Accept a SCIM Lab sharing link.">
+	<main class="grid min-h-screen place-items-center bg-[#fafafa] px-4 py-12">
+		<section class="w-full max-w-md rounded-lg border border-[#e4e4e7] bg-white p-6 shadow-sm">
+			<a class="flex items-center gap-2 text-sm font-semibold text-[#09090b] no-underline" href="/"><span class="grid size-6 place-items-center rounded-md bg-[#18181b] font-mono text-[9px] text-white">SL</span>SCIM Lab</a>
+			<span class="mt-8 inline-flex rounded-full border border-[#e4e4e7] bg-[#fafafa] px-2.5 py-1 text-xs font-medium text-[#52525b]">Shared server</span>
+			<h1 class="mt-4 text-2xl font-semibold tracking-[-0.03em]">{invite ? `Join ${invite.server.name}` : 'Link unavailable'}</h1>
+			<p class="mt-2 text-sm leading-6 text-[#71717a]">{error_message || 'You’ll become a co-owner with the same console access as every other member.'}</p>
+			{invite && context.user.is_anonymous && <a class="mt-6 inline-flex h-9 items-center rounded-md bg-[#18181b] px-4 text-sm font-medium text-white no-underline shadow-sm" href={`/auth/login?return_to=${encodeURIComponent(Astro.url.pathname)}`}>Sign in to join</a>}
+			{invite && !context.user.is_anonymous && <form class="mt-6" method="POST"><button class="h-9 cursor-pointer rounded-md bg-[#18181b] px-4 text-sm font-medium text-white shadow-sm" type="submit">Join server</button></form>}
+			<a class="mt-6 block text-sm text-[#71717a]" href="/">Back to console</a>
+		</section>
+	</main>
+</Layout>

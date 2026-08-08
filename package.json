@@ -1,5 +1,5 @@
 {
-  "name": "tempo-tasks",
+  "name": "scim-lab",
   "type": "module",
   "version": "0.0.1",
   "engines": {
@@ -7,24 +7,30 @@
   },
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build && node scripts/prepare-sites.mjs",
+    "build": "astro build",
+    "start": "node ./dist/server/entry.mjs",
+    "test": "vitest run",
     "preview": "astro preview",
     "astro": "astro",
     "db:generate": "drizzle-kit generate",
-    "db:migrate:local": "wrangler d1 migrations apply tempo-tasks --local"
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
-    "@astrojs/cloudflare": "^14.2.0",
+    "@astrojs/node": "^11.0.3",
     "@tailwindcss/vite": "^4.3.3",
     "astro": "^7.2.0",
     "drizzle-orm": "^0.45.2",
+    "openid-client": "^6.8.1",
+    "postgres": "^3.4.7",
     "tailwindcss": "^4.3.3"
   },
   "packageManager": "pnpm@10.10.0+sha512.d615db246fe70f25dcfea6d8d73dee782ce23e2245e3c4f6f888249fb568149318637dca73c2c5c8ef2a4ca0d5657fb9567188bfab47f566d1ee6ce987815c39",
   "devDependencies": {
     "@astrojs/check": "^0.9.10",
-    "@cloudflare/workers-types": "^5.20260807.2",
+    "@types/node": "^26.2.0",
     "drizzle-kit": "^0.31.10",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.10"
   }
 }
