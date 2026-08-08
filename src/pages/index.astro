@@ -1,11 +1,11 @@
 ---
-import AppHeader from '../components/AppHeader.astro';
-import EndpointView from '../components/EndpointView.astro';
-import FlashNotice from '../components/FlashNotice.astro';
-import GroupsPanel from '../components/GroupsPanel.astro';
-import LogsPanel from '../components/LogsPanel.astro';
-import SettingsPanel from '../components/SettingsPanel.astro';
-import UsersPanel from '../components/UsersPanel.astro';
+import AppHeader from '../presentation/components/AppHeader.astro';
+import EndpointView from '../presentation/components/EndpointView.astro';
+import FlashNotice from '../presentation/components/FlashNotice.astro';
+import GroupsPanel from '../presentation/components/GroupsPanel.astro';
+import LogsPanel from '../presentation/components/LogsPanel.astro';
+import SettingsPanel from '../presentation/components/SettingsPanel.astro';
+import UsersPanel from '../presentation/components/UsersPanel.astro';
 import {
 	get_server_lifecycle,
 	list_console_events,
@@ -17,7 +17,7 @@ import {
 	read_server_credential,
 	touch_server_console,
 } from '../db';
-import Layout from '../layouts/Layout.astro';
+import Layout from '../presentation/layouts/Layout.astro';
 import { get_console_context, get_flash } from '../lib/console_context';
 
 export const prerender = false;

@@ -1,5 +1,5 @@
 ---
-import type { scim_event_record } from '../db/schema';
+import type { scim_event_record } from '../../db/schema.ts';
 
 interface Props { events: scim_event_record[]; server_id: string; status_filter: string; method_filter: string }
 const { events, server_id, status_filter, method_filter } = Astro.props;

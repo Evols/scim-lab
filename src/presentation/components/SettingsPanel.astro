@@ -1,5 +1,5 @@
 ---
-import type { scim_server_record } from '../db/schema';
+import type { scim_server_record } from '../../db/schema.ts';
 
 interface invite_row { token_hash: string; created_at: Date; expires_at: Date }
 interface Props { server: scim_server_record; invites: invite_row[]; is_anonymous: boolean }
