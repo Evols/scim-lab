@@ -25,11 +25,12 @@
     "postgres": "^3.4.7",
     "tailwindcss": "^4.3.3"
   },
-  "packageManager": "pnpm@10.10.0+sha512.d615db246fe70f25dcfea6d8d73dee782ce23e2245e3c4f6f888249fb568149318637dca73c2c5c8ef2a4ca0d5657fb9567188bfab47f566d1ee6ce987815c39",
+  "packageManager": "pnpm@11.20.0+sha512.9a6f330a95b66446ea088faf1521405a8a01f07fde7124cc9958dfed52d4bb436737e65b08f85f37b46fcba375092558ac51262b816844b22f63406ed166bfee",
   "devDependencies": {
     "@astrojs/check": "^0.9.10",
     "@types/node": "^26.2.0",
     "drizzle-kit": "^0.31.10",
+    "prettier": "^3.9.6",
     "typescript": "^6.0.3",
     "vitest": "^4.1.10"
   }
