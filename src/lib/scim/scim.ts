@@ -1,23 +1,23 @@
 import { and, asc, count, eq, inArray, sql } from 'drizzle-orm';
-import { db, get_server_lifecycle, prune_events } from '../db';
-import { scim_events, scim_group_members, scim_groups, scim_servers, scim_users, console_users, type scim_group_record, type scim_server_record, type scim_user_record } from '../db/schema';
-import { safe_hash_equal } from './crypto';
+import { db, get_server_lifecycle, prune_events } from '../../db';
+import { scim_events, scim_group_members, scim_groups, scim_servers, scim_users, console_users, type scim_group_record, type scim_server_record, type scim_user_record } from '../../db/schema.ts';
+import { safe_hash_equal } from '../crypto.ts';
 
-const scim_content_type = 'application/scim+json; charset=utf-8';
-const user_schema = 'urn:ietf:params:scim:schemas:core:2.0:User';
-const group_schema = 'urn:ietf:params:scim:schemas:core:2.0:Group';
-const error_schema = 'urn:ietf:params:scim:api:messages:2.0:Error';
-const list_schema = 'urn:ietf:params:scim:api:messages:2.0:ListResponse';
-const max_body_bytes = 65_536;
+const SCIM_CONTENT_TYPE = 'application/scim+json; charset=utf-8';
+const USER_SCHEMA = 'urn:ietf:params:scim:schemas:core:2.0:User';
+const GROUP_SCHEMA = 'urn:ietf:params:scim:schemas:core:2.0:Group';
+const ERROR_SCHEMA = 'urn:ietf:params:scim:api:messages:2.0:Error';
+const LIST_SCHEMA = 'urn:ietf:params:scim:api:messages:2.0:ListResponse';
+const MAX_BODY_BYTES = 65_536;
 
 type JsonObject = Record<string, unknown>;
 
 function json_response(value: unknown, status = 200, headers: Record<string, string> = {}): Response {
-	return new Response(JSON.stringify(value), { status, headers: { 'content-type': scim_content_type, ...headers } });
+	return new Response(JSON.stringify(value), { status, headers: { 'content-type': SCIM_CONTENT_TYPE, ...headers } });
 }
 
 export function scim_error(status: number, detail: string, scim_type?: string): Response {
-	return json_response({ schemas: [error_schema], status: String(status), ...(scim_type ? { scimType: scim_type } : {}), detail }, status);
+	return json_response({ schemas: [ERROR_SCHEMA], status: String(status), ...(scim_type ? { scimType: scim_type } : {}), detail }, status);
 }
 
 function date_string(value: Date): string {
@@ -40,7 +40,7 @@ async function user_resource(row: scim_user_record, origin: string): Promise<Jso
 		.innerJoin(scim_groups, eq(scim_group_members.group_id, scim_groups.id))
 		.where(eq(scim_group_members.user_id, row.id));
 	return {
-		schemas: [user_schema],
+		schemas: [USER_SCHEMA],
 		id: row.id,
 		...(row.external_id ? { externalId: row.external_id } : {}),
 		userName: row.user_name,
@@ -65,7 +65,7 @@ async function group_resource(row: scim_group_record, origin: string): Promise<J
 		.innerJoin(scim_users, eq(scim_group_members.user_id, scim_users.id))
 		.where(eq(scim_group_members.group_id, row.id));
 	return {
-		schemas: [group_schema],
+		schemas: [GROUP_SCHEMA],
 		id: row.id,
 		...(row.external_id ? { externalId: row.external_id } : {}),
 		displayName: row.display_name,
@@ -149,7 +149,7 @@ export function paginate(resources: JsonObject[], url: URL): JsonObject {
 	const requested_count = Number.isFinite(parsed_count) ? Math.max(0, parsed_count) : 100;
 	const page_count = Math.min(100, requested_count);
 	return {
-		schemas: [list_schema],
+		schemas: [LIST_SCHEMA],
 		totalResults: resources.length,
 		startIndex: start_index,
 		itemsPerPage: Math.min(page_count, Math.max(0, resources.length - start_index + 1)),
@@ -373,7 +373,7 @@ function service_provider_config(server: scim_server_record): JsonObject {
 }
 
 const schema_documents: JsonObject[] = [
-	{ schemas: ['urn:ietf:params:scim:schemas:core:2.0:Schema'], id: user_schema, name: 'User', description: 'SCIM core User', attributes: [
+	{ schemas: ['urn:ietf:params:scim:schemas:core:2.0:Schema'], id: USER_SCHEMA, name: 'User', description: 'SCIM core User', attributes: [
 		{ name: 'userName', type: 'string', multiValued: false, required: true, caseExact: false, mutability: 'readWrite', returned: 'default', uniqueness: 'server' },
 		{ name: 'name', type: 'complex', multiValued: false, required: false, mutability: 'readWrite', returned: 'default', subAttributes: ['formatted', 'familyName', 'givenName', 'middleName', 'honorificPrefix', 'honorificSuffix'].map((name) => ({ name, type: 'string', multiValued: false, required: false, caseExact: false, mutability: 'readWrite', returned: 'default', uniqueness: 'none' })) },
 		{ name: 'displayName', type: 'string', multiValued: false, required: false, caseExact: false, mutability: 'readWrite', returned: 'default', uniqueness: 'none' },
@@ -384,15 +384,15 @@ const schema_documents: JsonObject[] = [
 		...['entitlements', 'roles', 'x509Certificates'].map((name) => ({ name, type: 'complex', multiValued: true, required: false, mutability: 'readWrite', returned: 'default' })),
 		{ name: 'groups', type: 'complex', multiValued: true, required: false, mutability: 'readOnly', returned: 'default' },
 	] },
-	{ schemas: ['urn:ietf:params:scim:schemas:core:2.0:Schema'], id: group_schema, name: 'Group', description: 'SCIM core Group', attributes: [
+	{ schemas: ['urn:ietf:params:scim:schemas:core:2.0:Schema'], id: GROUP_SCHEMA, name: 'Group', description: 'SCIM core Group', attributes: [
 		{ name: 'displayName', type: 'string', multiValued: false, required: true, caseExact: false, mutability: 'readWrite', returned: 'default', uniqueness: 'none' },
 		{ name: 'members', type: 'complex', multiValued: true, required: false, mutability: 'readWrite', returned: 'default' },
 	] },
 ];
 
 const resource_types: JsonObject[] = [
-	{ schemas: ['urn:ietf:params:scim:schemas:core:2.0:ResourceType'], id: 'User', name: 'User', endpoint: '/Users', schema: user_schema },
-	{ schemas: ['urn:ietf:params:scim:schemas:core:2.0:ResourceType'], id: 'Group', name: 'Group', endpoint: '/Groups', schema: group_schema },
+	{ schemas: ['urn:ietf:params:scim:schemas:core:2.0:ResourceType'], id: 'User', name: 'User', endpoint: '/Users', schema: USER_SCHEMA },
+	{ schemas: ['urn:ietf:params:scim:schemas:core:2.0:ResourceType'], id: 'Group', name: 'Group', endpoint: '/Groups', schema: GROUP_SCHEMA },
 ];
 
 function authenticate(server: scim_server_record, authorization: string | null): { success: boolean; mode: string | null } {
@@ -418,8 +418,8 @@ function sanitized_headers(headers: Headers): Record<string, string> {
 
 function truncate(value: string): { value: string; truncated: boolean } {
 	const bytes = Buffer.byteLength(value);
-	if (bytes <= max_body_bytes) return { value, truncated: false };
-	return { value: Buffer.from(value).subarray(0, max_body_bytes).toString('utf8'), truncated: true };
+	if (bytes <= MAX_BODY_BYTES) return { value, truncated: false };
+	return { value: Buffer.from(value).subarray(0, MAX_BODY_BYTES).toString('utf8'), truncated: true };
 }
 
 function redact_body(value: string): string {

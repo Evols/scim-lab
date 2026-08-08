@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { get_server_lifecycle } from '../src/db';
 import type { scim_server_record } from '../src/db/schema';
 import { decrypt_secret, encrypt_secret, hash_secret, safe_hash_equal } from '../src/lib/crypto';
-import { matches_filter, paginate } from '../src/lib/scim';
+import { matches_filter, paginate } from '../src/lib/scim/scim.ts';
 
 function server_at(last_console_access_at: Date, deactivated_at: Date | null = null): scim_server_record {
 	return {

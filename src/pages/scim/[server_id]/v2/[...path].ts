@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { handle_scim_request } from '../../../../lib/scim';
+import { handle_scim_request } from '../../../../lib/scim/scim.ts';
 
 export const prerender = false;
 
