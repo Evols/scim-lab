@@ -8,6 +8,9 @@ export default defineConfig({
 	output: 'server',
 	session: false,
 	adapter: node({ mode: 'standalone', bodySizeLimit: 1_048_576 }),
+	server: {
+		allowedHosts: true,
+	},
 
 	vite: {
 		plugins: [tailwindcss()],
