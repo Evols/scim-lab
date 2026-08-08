@@ -7,12 +7,12 @@ import {
 } from "../db";
 import { app_config } from "./config";
 
-interface cookie_value {
+interface CookieValue {
   value: string;
 }
 
-export interface cookie_store {
-  get(name: string): cookie_value | undefined;
+export interface CookieStore {
+  get(name: string): CookieValue | undefined;
   set(name: string, value: string, options: Record<string, unknown>): void;
   delete(name: string, options?: Record<string, unknown>): void;
 }
@@ -31,7 +31,7 @@ export function session_cookie_options(max_age = 30 * 86_400) {
 }
 
 export async function get_console_context(
-  cookies: cookie_store,
+  cookies: CookieStore,
 ): Promise<ConsoleContext> {
   await purge_expired_records();
   const raw_token = cookies.get(session_cookie_name)?.value;
@@ -49,7 +49,7 @@ export async function get_console_context(
 }
 
 export async function get_flash(
-  cookies: cookie_store,
+  cookies: CookieStore,
   user_id: string,
 ): Promise<Record<string, unknown> | null> {
   const token = cookies.get(flash_cookie_name)?.value;

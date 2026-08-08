@@ -1,9 +1,9 @@
 ---
-import type { scim_server_record } from '../../db/schema.ts';
+import type { ScimServerRecord } from '../../db/schema.ts';
 import type { ServerCredential } from '../../db';
 
 interface Props {
-	server: scim_server_record;
+	server: ScimServerRecord;
 	origin: string;
 	is_anonymous: boolean;
 	anonymous_credential?: ServerCredential | null;

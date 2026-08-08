@@ -1,4 +1,4 @@
-import type { scim_server_record } from "../../../db/schema.ts";
+import type { ScimServerRecord } from "../../../db/schema.ts";
 import { safe_hash_equal } from "../../crypto.ts";
 
 export type AuthenticationResult = {
@@ -7,7 +7,7 @@ export type AuthenticationResult = {
 };
 
 export function authenticate(
-  server: scim_server_record,
+  server: ScimServerRecord,
   authorization: string | null,
 ): AuthenticationResult {
   if (server.auth_mode === "bearer") {

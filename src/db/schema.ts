@@ -281,10 +281,10 @@ export const scim_events = pgTable(
   ],
 );
 
-export type console_user_record = typeof console_users.$inferSelect;
-export type scim_server_record = typeof scim_servers.$inferSelect;
-export type scim_user_record = typeof scim_users.$inferSelect;
-export type scim_group_record = typeof scim_groups.$inferSelect;
-export type scim_event_record = typeof scim_events.$inferSelect;
+export type ConsoleUserRecord = typeof console_users.$inferSelect;
+export type ScimServerRecord = typeof scim_servers.$inferSelect;
+export type ScimUserRecord = typeof scim_users.$inferSelect;
+export type ScimGroupRecord = typeof scim_groups.$inferSelect;
+export type ScimEventRecord = typeof scim_events.$inferSelect;
 
 import { sql } from "drizzle-orm";

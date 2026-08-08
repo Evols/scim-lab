@@ -1,11 +1,11 @@
 ---
 import { get_server_lifecycle } from '../../db';
-import type { console_user_record, scim_server_record } from '../../db/schema.ts';
+import type { ConsoleUserRecord, ScimServerRecord } from '../../db/schema.ts';
 
 interface Props {
-	user: console_user_record;
-	servers: Array<{ server: scim_server_record; creator: console_user_record }>;
-	selected_server?: scim_server_record;
+	user: ConsoleUserRecord;
+	servers: Array<{ server: ScimServerRecord; creator: ConsoleUserRecord }>;
+	selected_server?: ScimServerRecord;
 	view: string;
 	allow_create: boolean;
 	selected_lifecycle?: 'active' | 'deactivated' | 'expired' | null;

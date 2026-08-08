@@ -1,4 +1,4 @@
-import type { scim_server_record } from "../../../db/schema.ts";
+import type { ScimServerRecord } from "../../../db/schema.ts";
 import {
   create_group,
   delete_group,
@@ -22,7 +22,7 @@ import { service_error_response } from "./service-error.ts";
 async function route_groups(
   method: string,
   resource_id: string | undefined,
-  server: scim_server_record,
+  server: ScimServerRecord,
   origin: string,
   url: URL,
   body: string,
@@ -86,7 +86,7 @@ async function route_groups(
 export async function handle_groups(
   method: string,
   resource_id: string | undefined,
-  server: scim_server_record,
+  server: ScimServerRecord,
   origin: string,
   url: URL,
   body: string,

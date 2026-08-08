@@ -1,8 +1,8 @@
 ---
-import type { scim_event_record } from '../../db/schema.ts';
+import type { ScimEventRecord } from '../../db/schema.ts';
 import JsonPayloadViewer from './JsonPayloadViewer.astro';
 
-interface Props { events: scim_event_record[]; server_id: string; status_filter: string; method_filter: string }
+interface Props { events: ScimEventRecord[]; server_id: string; status_filter: string; method_filter: string }
 const { events, server_id, status_filter, method_filter } = Astro.props;
 const status_classes = (status: number) => status < 300 ? 'border-[#bbf7d0] bg-[#f0fdf4] text-[#15803d]' : status < 400 ? 'border-[#dbeafe] bg-[#eff6ff] text-[#1d4ed8]' : 'border-[#fecaca] bg-[#fef2f2] text-[#b91c1c]';
 ---

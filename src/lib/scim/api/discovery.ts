@@ -1,4 +1,4 @@
-import type { scim_server_record } from "../../../db/schema.ts";
+import type { ScimServerRecord } from "../../../db/schema.ts";
 import { paginate } from "../pagination.ts";
 import {
   resource_types,
@@ -18,7 +18,7 @@ import { json_response } from "./response.ts";
 export function discovery_response(
   resource: string | undefined,
   resource_id: string | undefined,
-  server: scim_server_record,
+  server: ScimServerRecord,
   url: URL,
 ): Response {
   if (resource === "ServiceProviderConfig")

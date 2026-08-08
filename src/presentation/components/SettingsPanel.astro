@@ -1,8 +1,8 @@
 ---
-import type { scim_server_record } from '../../db/schema.ts';
+import type { ScimServerRecord } from '../../db/schema.ts';
 
-interface invite_row { token_hash: string; created_at: Date; expires_at: Date }
-interface Props { server: scim_server_record; invites: invite_row[]; is_anonymous: boolean }
+interface InviteRow { token_hash: string; created_at: Date; expires_at: Date }
+interface Props { server: ScimServerRecord; invites: InviteRow[]; is_anonymous: boolean }
 const { server, invites, is_anonymous } = Astro.props;
 const return_to = `/?server=${server.id}&view=settings`;
 ---

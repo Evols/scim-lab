@@ -1,4 +1,4 @@
-import type { scim_server_record } from "../../../db/schema.ts";
+import type { ScimServerRecord } from "../../../db/schema.ts";
 import { GROUP_SCHEMA, USER_SCHEMA } from "../constants.ts";
 import {
   resource_type_schema,
@@ -10,7 +10,7 @@ import {
 } from "../schemas.ts";
 
 export function service_provider_config(
-  server: scim_server_record,
+  server: ScimServerRecord,
 ): ServiceProviderConfig {
   return service_provider_config_schema.parse({
     schemas: ["urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig"],

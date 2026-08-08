@@ -4,8 +4,8 @@ import {
   scim_group_members,
   scim_groups,
   scim_users,
-  type scim_group_record,
-  type scim_user_record,
+  type ScimGroupRecord,
+  type ScimUserRecord,
 } from "../../../db/schema.ts";
 import { GROUP_SCHEMA, USER_SCHEMA } from "../constants.ts";
 import {
@@ -35,7 +35,7 @@ export function clean_user_payload(
 }
 
 export async function user_resource(
-  row: scim_user_record,
+  row: ScimUserRecord,
   origin: string,
 ): Promise<UserResource> {
   const membership_rows = await db
@@ -67,7 +67,7 @@ export async function user_resource(
 }
 
 export async function group_resource(
-  row: scim_group_record,
+  row: ScimGroupRecord,
   origin: string,
 ): Promise<GroupResource> {
   const members = await db

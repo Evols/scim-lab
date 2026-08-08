@@ -1,6 +1,6 @@
 ---
-interface group_row { id: string; display_name: string; external_id: string | null; member_count: number; updated_at: Date }
-interface Props { groups: group_row[] }
+interface GroupRow { id: string; display_name: string; external_id: string | null; member_count: number; updated_at: Date }
+interface Props { groups: GroupRow[] }
 const { groups } = Astro.props;
 ---
 

@@ -34,17 +34,17 @@ import {
   scim_users,
   server_members,
   share_invites,
-  type console_user_record,
-  type scim_server_record,
+  type ConsoleUserRecord,
+  type ScimServerRecord,
 } from "./schema";
 
 const query_client = postgres(app_config.database_url, { max: 10 });
 export const db = drizzle({ client: query_client });
 
 export interface ConsoleContext {
-  user: console_user_record;
+  user: ConsoleUserRecord;
   session_token?: string;
-  fresh_server?: scim_server_record;
+  fresh_server?: ScimServerRecord;
 }
 
 export interface ServerCredential {
@@ -56,7 +56,7 @@ export interface ServerCredential {
 export type ServerLifecycle = "active" | "deactivated" | "expired";
 
 export function get_server_lifecycle(
-  server: scim_server_record,
+  server: ScimServerRecord,
   is_anonymous: boolean,
   now = new Date(),
 ): ServerLifecycle {
@@ -243,9 +243,9 @@ export async function touch_server_console(server_id: string): Promise<void> {
 }
 
 export async function mark_server_deactivated(
-  server: scim_server_record,
+  server: ScimServerRecord,
   is_anonymous: boolean,
-): Promise<scim_server_record> {
+): Promise<ScimServerRecord> {
   const lifecycle = get_server_lifecycle(server, is_anonymous);
   if (lifecycle === "active" || server.deactivated_at) return server;
   const active_days = is_anonymous ? 7 : 30;
@@ -521,7 +521,7 @@ export async function complete_oidc_login(
     email?: string;
     display_name?: string;
   },
-): Promise<console_user_record> {
+): Promise<ConsoleUserRecord> {
   return db.transaction(async (transaction) => {
     const existing = await transaction
       .select()
