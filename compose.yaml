@@ -15,7 +15,7 @@ services:
       DATABASE_URL: postgresql://postgres:${SERVICE_PASSWORD_64_DATABASE}@database:5432/scim_lab
       APP_ORIGIN: ${APP_ORIGIN:-https://scimlab.dev}
       APP_SECRET: ${SERVICE_HEX_64_APPLICATION}
-      OIDC_ISSUER_URL: ${OIDC_ISSUER_URL:-}
+      OIDC_ISSUER_URL: ${OIDC_ISSUER_URL:-https://auth.scimlab.dev/oidc}
       OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-}
       OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
     healthcheck:
@@ -26,6 +26,70 @@ services:
           "-e",
           "const s=require('node:net').connect(4321,'127.0.0.1',()=>{s.end();process.exit(0)});s.on('error',()=>process.exit(1))",
         ]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  logto:
+    image: svhd/logto:1.42.0
+    restart: unless-stopped
+    init: true
+    depends_on:
+      logto-setup:
+        condition: service_completed_successfully
+    expose:
+      - "3001"
+      - "3002"
+    environment:
+      DB_URL: postgresql://postgres:${SERVICE_PASSWORD_64_LOGTO_DATABASE}@logto-database:5432/logto
+      TRUST_PROXY_HEADER: "1"
+      ENDPOINT: ${LOGTO_ENDPOINT:-https://auth.scimlab.dev}
+      ADMIN_ENDPOINT: ${LOGTO_ADMIN_ENDPOINT:-https://auth-admin.scimlab.dev}
+      SECRET_VAULT_KEK: ${SERVICE_REALBASE64_32_LOGTO}
+    volumes:
+      - logto_connectors:/etc/logto/packages/core/connectors
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "const s=require('node:net').connect(3001,'127.0.0.1',()=>{s.end();process.exit(0)});s.on('error',()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  logto-setup:
+    image: svhd/logto:1.42.0
+    restart: "no"
+    exclude_from_hc: true
+    depends_on:
+      logto-database:
+        condition: service_healthy
+    entrypoint: ["sh", "-c"]
+    command:
+      - >-
+        npm run cli db seed -- --swe &&
+        npm run cli connector add -- @logto/connector-google &&
+        npm run alteration deploy latest
+    environment:
+      CI: "true"
+      DB_URL: postgresql://postgres:${SERVICE_PASSWORD_64_LOGTO_DATABASE}@logto-database:5432/logto
+    volumes:
+      - logto_connectors:/etc/logto/packages/core/connectors
+
+  logto-database:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: logto
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${SERVICE_PASSWORD_64_LOGTO_DATABASE}
+    volumes:
+      - logto_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d logto"]
       interval: 5s
       timeout: 5s
       retries: 12
@@ -60,3 +124,5 @@ services:
 
 volumes:
   pgdata:
+  logto_pgdata:
+  logto_connectors:

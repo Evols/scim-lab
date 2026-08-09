@@ -23,4 +23,11 @@ export async function get_oidc_configuration(): Promise<oidc.Configuration> {
   return cached_configuration;
 }
 
+export async function get_oidc_end_session_url(): Promise<URL> {
+  const configuration = await get_oidc_configuration();
+  return oidc.buildEndSessionUrl(configuration, {
+    post_logout_redirect_uri: APP_CONFIG.app_origin,
+  });
+}
+
 export { oidc };
