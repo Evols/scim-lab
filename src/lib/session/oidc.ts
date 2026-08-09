@@ -1,5 +1,5 @@
 import * as oidc from "openid-client";
-import { APP_CONFIG, oidc_is_configured } from "../config";
+import { APP_CONFIG, oidc_is_configured } from "../config.ts";
 
 let cached_configuration: oidc.Configuration | undefined;
 

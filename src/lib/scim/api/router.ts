@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { get_server_lifecycle } from "../../application";
+import { get_server_lifecycle } from "../../management/server";
 import { db } from "../../database";
 import { console_users, scim_servers } from "../../../db/schema.ts";
 import { authenticate } from "./auth.ts";

@@ -1,11 +1,8 @@
-import {
-  create_anonymous_context,
-  find_console_session,
-  purge_expired_records,
-  take_flash,
-  type ConsoleContext,
-} from "./repository";
-import { APP_CONFIG } from "../config";
+import { purge_expired_records } from "../management/maintenance.ts";
+import { APP_CONFIG } from "../config.ts";
+import type { Database } from "../database.ts";
+import { take_flash } from "./flash.ts";
+import { create_anonymous_context, find_console_session, type ConsoleContext } from "./session.ts";
 
 interface CookieValue {
   value: string;
@@ -30,25 +27,32 @@ export function session_cookie_options(max_age = 30 * 86_400) {
   };
 }
 
-export async function get_console_context(cookies: CookieStore): Promise<ConsoleContext> {
-  await purge_expired_records();
+export async function get_console_context(cookies: CookieStore, database: Database): Promise<ConsoleContext> {
+  await purge_expired_records(database);
+
   const raw_token = cookies.get(SESSION_COOKIE_NAME)?.value;
   if (raw_token) {
-    const context = await find_console_session(raw_token);
+    const context = await find_console_session(raw_token, database);
     if (context) {
       return context;
     }
   }
-  const context = await create_anonymous_context();
+
+  const context = await create_anonymous_context(database);
   cookies.set(SESSION_COOKIE_NAME, context.session_token!, session_cookie_options(37 * 86_400));
   return context;
 }
 
-export async function get_flash(cookies: CookieStore, user_id: string): Promise<Record<string, unknown> | null> {
+export async function get_flash(
+  cookies: CookieStore,
+  user_id: string,
+  database: Database,
+): Promise<Record<string, unknown> | null> {
   const token = cookies.get(FLASH_COOKIE_NAME)?.value;
   if (!token) {
     return null;
   }
+
   cookies.delete(FLASH_COOKIE_NAME, { path: "/" });
-  return take_flash(user_id, token);
+  return take_flash(user_id, token, database);
 }

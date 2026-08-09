@@ -6,24 +6,23 @@ import GroupsPanel from "../presentation/components/GroupsPanel.astro";
 import LogsPanel from "../presentation/components/LogsPanel.astro";
 import SettingsPanel from "../presentation/components/SettingsPanel.astro";
 import UsersPanel from "../presentation/components/UsersPanel.astro";
+import { list_console_events, list_console_groups, list_console_users } from "../lib/management/console";
+import { read_server_credential } from "../lib/management/credential";
+import { list_share_invites } from "../lib/management/invite";
 import {
   get_server_lifecycle,
-  list_console_events,
-  list_console_groups,
-  list_console_users,
   list_servers_for_user,
-  list_share_invites,
   mark_server_deactivated,
-  read_server_credential,
   touch_server_console,
-} from "../lib/application";
+} from "../lib/management/server";
+import { get_console_context, get_flash } from "../lib/session/context";
+import { db } from "../lib/database";
 import Layout from "../presentation/layouts/Layout.astro";
-import { get_console_context, get_flash } from "../lib/application";
 
 export const prerender = false;
 
-const context = await get_console_context(Astro.cookies);
-const server_rows = await list_servers_for_user(context.user.id);
+const context = await get_console_context(Astro.cookies, db);
+const server_rows = await list_servers_for_user(context.user.id, db);
 const requested_server_id = Astro.url.searchParams.get("server");
 const selected_access = server_rows.find(({ server }) => server.id === requested_server_id) ?? server_rows[0];
 let lifecycle = selected_access
@@ -31,10 +30,14 @@ let lifecycle = selected_access
   : null;
 
 if (selected_access && lifecycle !== "active") {
-  selected_access.server = await mark_server_deactivated(selected_access.server, selected_access.creator.is_anonymous);
+  selected_access.server = await mark_server_deactivated(
+    selected_access.server,
+    selected_access.creator.is_anonymous,
+    db,
+  );
   lifecycle = get_server_lifecycle(selected_access.server, selected_access.creator.is_anonymous);
 } else if (selected_access) {
-  await touch_server_console(selected_access.server.id);
+  await touch_server_console(selected_access.server.id, db);
 }
 
 const allowed_views = ["overview", "users", "groups", "logs", "settings"];
@@ -43,7 +46,7 @@ const view = allowed_views.includes(requested_view) ? requested_view : "overview
 const status_filter = Astro.url.searchParams.get("status") ?? "";
 const method_filter = Astro.url.searchParams.get("method") ?? "";
 
-const flash = await get_flash(Astro.cookies, context.user.id);
+const flash = await get_flash(Astro.cookies, context.user.id, db);
 
 const selected_server = selected_access?.server;
 const allow_create =
@@ -51,14 +54,14 @@ const allow_create =
   server_rows.filter(({ server }) => server.created_by_user_id === context.user.id).length < 3;
 const anonymous_credential =
   selected_server && context.user.is_anonymous && lifecycle === "active"
-    ? await read_server_credential(context.user.id, selected_server.id).catch(() => null)
+    ? await read_server_credential(context.user.id, selected_server.id, db).catch(() => null)
     : null;
 const [users, groups, events, invites] = selected_server
   ? await Promise.all([
-      view === "users" ? list_console_users(selected_server.id) : Promise.resolve([]),
-      view === "groups" ? list_console_groups(selected_server.id) : Promise.resolve([]),
-      view === "logs" ? list_console_events(selected_server.id, status_filter, method_filter) : Promise.resolve([]),
-      view === "settings" ? list_share_invites(selected_server.id) : Promise.resolve([]),
+      view === "users" ? list_console_users(selected_server.id, db) : Promise.resolve([]),
+      view === "groups" ? list_console_groups(selected_server.id, db) : Promise.resolve([]),
+      view === "logs" ? list_console_events(selected_server.id, status_filter, method_filter, db) : Promise.resolve([]),
+      view === "settings" ? list_share_invites(selected_server.id, db) : Promise.resolve([]),
     ])
   : [[], [], [], []];
 ---
