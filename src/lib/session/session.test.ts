@@ -13,7 +13,7 @@ describe("console sessions", () => {
 
       expect(context.user.is_anonymous).toBe(true);
       expect(context.session_token).toBeTruthy();
-      expect(context.fresh_server?.name).toBe("My SCIM server");
+      expect(context.fresh_server?.name).toMatch(/^[a-z]+-[a-z]+-\d{6}$/);
       expect((await find_console_session(context.session_token!, transaction))?.user.id).toBe(context.user.id);
       expect((await get_server_for_user(context.user.id, context.fresh_server!.id, transaction))?.server.id).toBe(
         context.fresh_server!.id,

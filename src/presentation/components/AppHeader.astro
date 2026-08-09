@@ -9,10 +9,11 @@ interface Props {
   selected_server?: ScimServerRecord;
   view: string;
   allow_create: boolean;
+  suggested_server_name: string;
   selected_lifecycle?: "active" | "deactivated" | "expired" | null;
 }
 
-const { user, servers, selected_server, view, allow_create, selected_lifecycle } = Astro.props;
+const { user, servers, selected_server, view, allow_create, suggested_server_name, selected_lifecycle } = Astro.props;
 const selected_query = selected_server ? `?server=${selected_server.id}` : "";
 ---
 
@@ -97,6 +98,7 @@ const selected_query = selected_server ? `?server=${selected_server.id}` : "";
     {
       selected_server && (
         <nav class="ml-1 hidden items-center gap-1 md:flex" aria-label="Server resources">
+          <ResourceLink label="Overview" href={`${selected_query}`} active={view === "overview"} />
           <ResourceLink label="Users" href={`${selected_query}&view=users`} active={view === "users"} />
           <ResourceLink label="Groups" href={`${selected_query}&view=groups`} active={view === "groups"} />
           <ResourceLink label="Logs" href={`${selected_query}&view=logs`} active={view === "logs"} />
@@ -169,7 +171,7 @@ const selected_query = selected_server ? `?server=${selected_server.id}` : "";
       id="new-server-name"
       name="name"
       maxlength="80"
-      value="Provisioning sandbox"
+      value={suggested_server_name}
       required
     />
     <div class="mt-6 flex justify-end gap-2">

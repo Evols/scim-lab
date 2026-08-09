@@ -7,6 +7,7 @@ interface ImportMetaEnv {
   readonly OIDC_ISSUER_URL?: string;
   readonly OIDC_CLIENT_ID?: string;
   readonly OIDC_CLIENT_SECRET?: string;
+  readonly OIDC_SCOPES?: string;
 }
 
 interface ImportMeta {

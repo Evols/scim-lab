@@ -69,11 +69,20 @@ describe("OIDC session authentication", () => {
 
       const user = await complete_oidc_login(
         anonymous.user.id,
-        { issuer: "https://issuer.example", subject: "existing-subject" },
+        {
+          issuer: "https://issuer.example",
+          subject: "existing-subject",
+          email: "updated@example.com",
+          display_name: "Updated name",
+        },
         transaction,
       );
 
-      expect(user.id).toBe(existing!.id);
+      expect(user).toMatchObject({
+        id: existing!.id,
+        email: "updated@example.com",
+        display_name: "Updated name",
+      });
       expect((await get_server_for_user(existing!.id, anonymous.fresh_server!.id, transaction))?.server.id).toBe(
         anonymous.fresh_server!.id,
       );
