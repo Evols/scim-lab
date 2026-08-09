@@ -3,6 +3,7 @@ import type { ConsoleUserRecord, ScimServerRecord } from "../../db/schema.ts";
 import { console_users, scim_servers, server_members } from "../../db/schema.ts";
 import { encrypt_secret, generated_bearer_token, hash_secret } from "../crypto.ts";
 import type { Database } from "../database.ts";
+import { generated_server_name } from "./server-name.ts";
 
 export interface ServerAccess {
   server: ScimServerRecord;
@@ -111,7 +112,7 @@ export async function create_server(user_id: string, name: string, database: Dat
     const [server] = await transaction
       .insert(scim_servers)
       .values({
-        name: name.slice(0, 80) || "Untitled SCIM server",
+        name: name.slice(0, 80) || generated_server_name(),
         created_by_user_id: user_id,
         bearer_token_hash: hash_secret(bearer_token),
         bearer_token_encrypted: encrypt_secret(bearer_token),

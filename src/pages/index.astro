@@ -9,6 +9,7 @@ import UsersPanel from "../presentation/components/UsersPanel.astro";
 import { list_console_events, list_console_groups, list_console_users } from "../lib/management/console";
 import { read_server_credential } from "../lib/management/credential";
 import { list_share_invites } from "../lib/management/invite";
+import { generated_server_name } from "../lib/management/server-name";
 import {
   get_server_lifecycle,
   list_servers_for_user,
@@ -52,6 +53,7 @@ const selected_server = selected_access?.server;
 const allow_create =
   !context.user.is_anonymous &&
   server_rows.filter(({ server }) => server.created_by_user_id === context.user.id).length < 3;
+const suggested_server_name = allow_create ? generated_server_name() : "";
 const anonymous_credential =
   selected_server && context.user.is_anonymous && lifecycle === "active"
     ? await read_server_credential(context.user.id, selected_server.id, db).catch(() => null)
@@ -73,6 +75,7 @@ const [users, groups, events, invites] = selected_server
     selected_server={selected_server}
     view={view}
     allow_create={allow_create}
+    suggested_server_name={suggested_server_name}
     selected_lifecycle={lifecycle}
   />
   {flash && <FlashNotice flash={flash} />}
@@ -95,7 +98,7 @@ const [users, groups, events, invites] = selected_server
               <input
                 class="h-9 min-w-0 flex-1 rounded-md border border-[#d4d4d8] px-3 text-sm shadow-xs"
                 name="name"
-                value="Provisioning sandbox"
+                value={suggested_server_name}
                 required
               />
               <button class="h-9 rounded-md bg-[#18181b] px-4 text-sm font-medium text-white" type="submit">

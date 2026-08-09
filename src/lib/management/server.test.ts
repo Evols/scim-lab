@@ -87,6 +87,17 @@ describe("server management", () => {
   );
 
   it(
+    "generates a name when none is supplied",
+    with_rollback_transaction(async (transaction) => {
+      const [user] = await transaction.insert(console_users).values({ is_anonymous: false }).returning();
+
+      const created = await create_server(user!.id, "", transaction);
+
+      expect(created.server.name).toMatch(/^[a-z]+-[a-z]+-\d{6}$/);
+    }),
+  );
+
+  it(
     "deactivates an inactive server and lets a signed-in owner reactivate it",
     with_rollback_transaction(async (transaction) => {
       const [user] = await transaction.insert(console_users).values({ is_anonymous: false }).returning();
