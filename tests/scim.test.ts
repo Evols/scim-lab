@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { get_server_lifecycle } from "../src/db";
+import { get_server_lifecycle } from "../src/lib/application";
 import type { ScimServerRecord } from "../src/db/schema";
 import { decrypt_secret, encrypt_secret, hash_secret, safe_hash_equal } from "../src/lib/crypto";
 import { matches_filter, paginate } from "../src/lib/scim/scim.ts";

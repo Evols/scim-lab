@@ -1,10 +1,16 @@
 import type { ScimServerRecord } from "../../../db/schema.ts";
-import { GROUP_SCHEMA, USER_SCHEMA } from "./constants.ts";
-import { ResourceType, SchemaDocument, ServiceProviderConfigSchema, type ServiceProviderConfig } from "../schemas.ts";
+import {
+  GROUP_SCHEMA_URI,
+  RESOURCE_TYPE_SCHEMA_URI,
+  SCHEMA_DEFINITION_URI,
+  SERVICE_PROVIDER_CONFIG_SCHEMA_URI,
+  USER_SCHEMA_URI,
+} from "./constants.ts";
+import { ResourceType, SchemaDefinition, ServiceProviderConfig } from "../schemas.ts";
 
-export function service_provider_config(server: ScimServerRecord): ServiceProviderConfig {
-  return ServiceProviderConfigSchema.parse({
-    schemas: ["urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig"],
+export function get_service_provider_config(server: ScimServerRecord): ServiceProviderConfig {
+  return ServiceProviderConfig.parse({
+    schemas: [SERVICE_PROVIDER_CONFIG_SCHEMA_URI],
     documentationUri: "https://www.rfc-editor.org/rfc/rfc7644",
     patch: { supported: true },
     bulk: { supported: false, maxOperations: 0, maxPayloadSize: 0 },
@@ -32,11 +38,11 @@ export function service_provider_config(server: ScimServerRecord): ServiceProvid
   });
 }
 
-// These documents describe the subset of core SCIM attributes this lab accepts.
-export const SCHEMA_DOCUMENTS = SchemaDocument.array().parse([
+// These definitions describe the subset of core SCIM attributes this lab accepts.
+export const SCHEMA_DEFINITIONS = SchemaDefinition.array().parse([
   {
-    schemas: ["urn:ietf:params:scim:schemas:core:2.0:Schema"],
-    id: USER_SCHEMA,
+    schemas: [SCHEMA_DEFINITION_URI],
+    id: USER_SCHEMA_URI,
     name: "User",
     description: "SCIM core User",
     attributes: [
@@ -135,8 +141,8 @@ export const SCHEMA_DOCUMENTS = SchemaDocument.array().parse([
     ],
   },
   {
-    schemas: ["urn:ietf:params:scim:schemas:core:2.0:Schema"],
-    id: GROUP_SCHEMA,
+    schemas: [SCHEMA_DEFINITION_URI],
+    id: GROUP_SCHEMA_URI,
     name: "Group",
     description: "SCIM core Group",
     attributes: [
@@ -164,17 +170,17 @@ export const SCHEMA_DOCUMENTS = SchemaDocument.array().parse([
 
 export const RESOURCE_TYPES = ResourceType.array().parse([
   {
-    schemas: ["urn:ietf:params:scim:schemas:core:2.0:ResourceType"],
+    schemas: [RESOURCE_TYPE_SCHEMA_URI],
     id: "User",
     name: "User",
     endpoint: "/Users",
-    schema: USER_SCHEMA,
+    schema: USER_SCHEMA_URI,
   },
   {
-    schemas: ["urn:ietf:params:scim:schemas:core:2.0:ResourceType"],
+    schemas: [RESOURCE_TYPE_SCHEMA_URI],
     id: "Group",
     name: "Group",
     endpoint: "/Groups",
-    schema: GROUP_SCHEMA,
+    schema: GROUP_SCHEMA_URI,
   },
 ]);

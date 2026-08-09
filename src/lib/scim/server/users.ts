@@ -1,9 +1,9 @@
 import { and, asc, count, eq, sql } from "drizzle-orm";
-import { db } from "../../../db";
+import { db } from "../../database";
 import { scim_users } from "../../../db/schema.ts";
 import { matches_filter } from "./filter.ts";
 import { paginate, type ListQuery } from "./pagination.ts";
-import type { PatchOperation, UserListResponse, UserResource, UserWriteInput } from "../schemas.ts";
+import type { PatchOperation, UserInput, UserListResponse, UserResource } from "../schemas.ts";
 import { ScimServiceError } from "./error.ts";
 import { merge_patch_value } from "./patch.ts";
 import { clean_user_payload, user_resource } from "./resources.ts";
@@ -42,7 +42,7 @@ export async function get_user(server_id: string, user_id: string, origin: strin
   return user_resource(await find_user(server_id, user_id), origin);
 }
 
-export async function create_user(server_id: string, input: UserWriteInput, origin: string): Promise<UserResource> {
+export async function create_user(server_id: string, input: UserInput, origin: string): Promise<UserResource> {
   const user_name = String(input.userName ?? "").trim();
   if (!user_name) {
     throw new ScimServiceError("user_name_required", "userName is required.");
@@ -90,7 +90,7 @@ export async function delete_user(server_id: string, user_id: string): Promise<v
 export async function replace_user(
   server_id: string,
   user_id: string,
-  input: UserWriteInput,
+  input: UserInput,
   origin: string,
 ): Promise<UserResource> {
   const existing = await find_user(server_id, user_id);

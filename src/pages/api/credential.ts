@@ -1,6 +1,5 @@
 import type { APIRoute } from "astro";
-import { read_server_credential } from "../../db";
-import { get_console_context } from "../../lib/console_context";
+import { get_console_context, read_server_credential } from "../../lib/application";
 
 export const prerender = false;
 

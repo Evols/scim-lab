@@ -1,7 +1,7 @@
 import type { ScimServerRecord } from "../../../db/schema.ts";
 import { create_user, delete_user, get_user, list_users, patch_user, replace_user } from "../server/users.ts";
 import { base_url } from "../server/resources.ts";
-import { PatchRequestSchema, UserListResponseSchema, UserResourceSchema, UserWriteSchema } from "../schemas.ts";
+import { PatchRequest, UserInput, UserListResponse, UserResource } from "../schemas.ts";
 import { validate_json_body } from "./body.ts";
 import { scim_error } from "./error.ts";
 import { json_response } from "./response.ts";
@@ -16,7 +16,7 @@ async function route_users(
   body: string,
 ): Promise<Response> {
   if (method === "GET" && resource_id) {
-    return json_response(await get_user(server.id, resource_id, origin), UserResourceSchema);
+    return json_response(await get_user(server.id, resource_id, origin), UserResource);
   }
 
   if (method === "GET") {
@@ -25,16 +25,16 @@ async function route_users(
       start_index: url.searchParams.get("startIndex"),
       count: url.searchParams.get("count"),
     });
-    return json_response(result, UserListResponseSchema);
+    return json_response(result, UserListResponse);
   }
 
   if (method === "POST" && resource_id === undefined) {
-    const validation = validate_json_body(body, UserWriteSchema);
+    const validation = validate_json_body(body, UserInput);
     if (!validation.success) {
       return validation.response;
     }
     const resource = await create_user(server.id, validation.data, origin);
-    return json_response(resource, UserResourceSchema, 201, {
+    return json_response(resource, UserResource, 201, {
       location: `${base_url(origin, server.id)}/Users/${resource.id}`,
     });
   }
@@ -49,21 +49,18 @@ async function route_users(
   }
 
   if (method === "PUT") {
-    const validation = validate_json_body(body, UserWriteSchema);
+    const validation = validate_json_body(body, UserInput);
     if (!validation.success) {
       return validation.response;
     }
-    return json_response(await replace_user(server.id, resource_id, validation.data, origin), UserResourceSchema);
+    return json_response(await replace_user(server.id, resource_id, validation.data, origin), UserResource);
   }
   if (method === "PATCH") {
-    const validation = validate_json_body(body, PatchRequestSchema);
+    const validation = validate_json_body(body, PatchRequest);
     if (!validation.success) {
       return validation.response;
     }
-    return json_response(
-      await patch_user(server.id, resource_id, validation.data.Operations, origin),
-      UserResourceSchema,
-    );
+    return json_response(await patch_user(server.id, resource_id, validation.data.Operations, origin), UserResource);
   }
 
   // Preserve the distinction between an unknown resource and an unsupported

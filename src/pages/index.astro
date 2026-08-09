@@ -16,9 +16,9 @@ import {
   mark_server_deactivated,
   read_server_credential,
   touch_server_console,
-} from "../db";
+} from "../lib/application";
 import Layout from "../presentation/layouts/Layout.astro";
-import { get_console_context, get_flash } from "../lib/console_context";
+import { get_console_context, get_flash } from "../lib/application";
 
 export const prerender = false;
 

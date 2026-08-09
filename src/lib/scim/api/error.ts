@@ -1,17 +1,16 @@
 import { json_response } from "./response.ts";
-import { ScimErrorSchema } from "../schemas.ts";
-
-const ERROR_SCHEMA = "urn:ietf:params:scim:api:messages:2.0:Error";
+import { ScimError } from "../schemas.ts";
+import { ERROR_SCHEMA_URI } from "../server/constants.ts";
 
 export function scim_error(status: number, detail: string, scim_type?: string): Response {
   return json_response(
     {
-      schemas: [ERROR_SCHEMA],
+      schemas: [ERROR_SCHEMA_URI],
       status: String(status),
       ...(scim_type ? { scimType: scim_type } : {}),
       detail,
     },
-    ScimErrorSchema,
+    ScimError,
     status,
   );
 }

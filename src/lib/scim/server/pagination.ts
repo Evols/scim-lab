@@ -1,7 +1,7 @@
-import { LIST_SCHEMA } from "./constants.ts";
+import { LIST_RESPONSE_SCHEMA_URI } from "./constants.ts";
 
 export type ListResponse<T> = {
-  schemas: [typeof LIST_SCHEMA];
+  schemas: [typeof LIST_RESPONSE_SCHEMA_URI];
   totalResults: number;
   startIndex: number;
   itemsPerPage: number;
@@ -35,7 +35,7 @@ export function paginate<T>(resources: T[], source: URL | PaginationParams): Lis
   // The service advertises maxResults=100, so every list endpoint enforces it.
   const page_count = Math.min(100, requested_count);
   return {
-    schemas: [LIST_SCHEMA],
+    schemas: [LIST_RESPONSE_SCHEMA_URI],
     totalResults: resources.length,
     startIndex: start_index,
     itemsPerPage: Math.min(page_count, Math.max(0, resources.length - start_index + 1)),

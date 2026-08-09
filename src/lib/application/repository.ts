@@ -1,7 +1,6 @@
 import { and, asc, count, desc, eq, gt, inArray, isNull, lt, or, sql } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
-import { APP_CONFIG } from "../lib/config";
+import { db } from "../database";
+import { prune_events } from "../scim/api/events.ts";
 import {
   decrypt_secret,
   encrypt_secret,
@@ -9,7 +8,7 @@ import {
   generated_bearer_token,
   hash_secret,
   random_secret,
-} from "../lib/crypto";
+} from "../crypto";
 import {
   console_sessions,
   console_flashes,
@@ -24,10 +23,7 @@ import {
   share_invites,
   type ConsoleUserRecord,
   type ScimServerRecord,
-} from "./schema";
-
-const QUERY_CLIENT = postgres(APP_CONFIG.database_url, { max: 10 });
-export const db = drizzle({ client: QUERY_CLIENT });
+} from "../../db/schema";
 
 export interface ConsoleContext {
   user: ConsoleUserRecord;
@@ -560,23 +556,6 @@ export async function list_console_events(server_id: string, status_filter?: str
     .where(and(...conditions))
     .orderBy(desc(scim_events.created_at))
     .limit(200);
-}
-
-export async function prune_events(server_id: string): Promise<void> {
-  await db
-    .delete(scim_events)
-    .where(
-      and(eq(scim_events.server_id, server_id), lt(scim_events.created_at, new Date(Date.now() - 30 * 86_400_000))),
-    );
-  await db.execute(sql`
-		delete from ${scim_events}
-		where ${scim_events.server_id} = ${server_id}
-		and ${scim_events.id} not in (
-			select ${scim_events.id} from ${scim_events}
-			where ${scim_events.server_id} = ${server_id}
-			order by ${scim_events.id} desc limit 1000
-		)
-	`);
 }
 
 export async function purge_expired_records(): Promise<void> {

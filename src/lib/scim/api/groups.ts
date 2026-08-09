@@ -1,7 +1,7 @@
 import type { ScimServerRecord } from "../../../db/schema.ts";
 import { create_group, delete_group, get_group, list_groups, patch_group, replace_group } from "../server/groups.ts";
 import { base_url } from "../server/resources.ts";
-import { GroupListResponseSchema, GroupResourceSchema, GroupWriteSchema, PatchRequestSchema } from "../schemas.ts";
+import { GroupInput, GroupListResponse, GroupResource, PatchRequest } from "../schemas.ts";
 import { validate_json_body } from "./body.ts";
 import { scim_error } from "./error.ts";
 import { json_response } from "./response.ts";
@@ -16,7 +16,7 @@ async function route_groups(
   body: string,
 ): Promise<Response> {
   if (method === "GET" && resource_id) {
-    return json_response(await get_group(server.id, resource_id, origin), GroupResourceSchema);
+    return json_response(await get_group(server.id, resource_id, origin), GroupResource);
   }
 
   if (method === "GET") {
@@ -25,16 +25,16 @@ async function route_groups(
       start_index: url.searchParams.get("startIndex"),
       count: url.searchParams.get("count"),
     });
-    return json_response(result, GroupListResponseSchema);
+    return json_response(result, GroupListResponse);
   }
 
   if (method === "POST" && !resource_id) {
-    const validation = validate_json_body(body, GroupWriteSchema);
+    const validation = validate_json_body(body, GroupInput);
     if (!validation.success) {
       return validation.response;
     }
     const resource = await create_group(server.id, validation.data, origin);
-    return json_response(resource, GroupResourceSchema, 201, {
+    return json_response(resource, GroupResource, 201, {
       location: `${base_url(origin, server.id)}/Groups/${resource.id}`,
     });
   }
@@ -47,21 +47,18 @@ async function route_groups(
     return new Response(null, { status: 204 });
   }
   if (method === "PUT") {
-    const validation = validate_json_body(body, GroupWriteSchema);
+    const validation = validate_json_body(body, GroupInput);
     if (!validation.success) {
       return validation.response;
     }
-    return json_response(await replace_group(server.id, resource_id, validation.data, origin), GroupResourceSchema);
+    return json_response(await replace_group(server.id, resource_id, validation.data, origin), GroupResource);
   }
   if (method === "PATCH") {
-    const validation = validate_json_body(body, PatchRequestSchema);
+    const validation = validate_json_body(body, PatchRequest);
     if (!validation.success) {
       return validation.response;
     }
-    return json_response(
-      await patch_group(server.id, resource_id, validation.data.Operations, origin),
-      GroupResourceSchema,
-    );
+    return json_response(await patch_group(server.id, resource_id, validation.data.Operations, origin), GroupResource);
   }
 
   await get_group(server.id, resource_id, origin);

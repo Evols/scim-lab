@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { validate_json_body } from "../src/lib/scim/api/body.ts";
 import { json_response } from "../src/lib/scim/api/response.ts";
-import { GroupWriteSchema, PatchRequestSchema, UserResourceSchema, UserWriteSchema } from "../src/lib/scim/schemas.ts";
+import { GroupInput, PatchRequest, UserInput, UserResource } from "../src/lib/scim/schemas.ts";
 
 async function error_payload(result: ReturnType<typeof validate_json_body>) {
   if (result.success) {
@@ -15,14 +15,14 @@ async function error_payload(result: ReturnType<typeof validate_json_body>) {
 
 describe("SCIM request structure validation", () => {
   it("maps malformed JSON to invalidSyntax", async () => {
-    const result = validate_json_body("{", UserWriteSchema);
+    const result = validate_json_body("{", UserInput);
     const error = await error_payload(result);
 
     expect(error.scimType).toBe("invalidSyntax");
   });
 
   it("maps invalid core attribute shapes to invalidValue", async () => {
-    const result = validate_json_body(JSON.stringify({ userName: 42 }), UserWriteSchema);
+    const result = validate_json_body(JSON.stringify({ userName: 42 }), UserInput);
     const error = await error_payload(result);
 
     expect(error.scimType).toBe("invalidValue");
@@ -36,7 +36,7 @@ describe("SCIM request structure validation", () => {
         userName: "ada@example.com",
         [extension]: { employeeNumber: "123" },
       }),
-      UserWriteSchema,
+      UserInput,
     );
 
     expect(result.success).toBe(true);
@@ -51,7 +51,7 @@ describe("SCIM request structure validation", () => {
         userName: "ada@example.com",
         name: { givenName: "Ada", vendorField: "not a core sub-attribute" },
       }),
-      UserWriteSchema,
+      UserInput,
     );
 
     expect(result.success).toBe(true);
@@ -61,7 +61,7 @@ describe("SCIM request structure validation", () => {
   });
 
   it("requires group members to have a string value", async () => {
-    const result = validate_json_body(JSON.stringify({ members: [{ display: "Ada" }] }), GroupWriteSchema);
+    const result = validate_json_body(JSON.stringify({ members: [{ display: "Ada" }] }), GroupInput);
     const error = await error_payload(result);
 
     expect(error.scimType).toBe("invalidValue");
@@ -71,7 +71,7 @@ describe("SCIM request structure validation", () => {
   it("leaves supported-operation checks to the PATCH handler", () => {
     const result = validate_json_body(
       JSON.stringify({ Operations: [{ op: "archive", path: "active" }] }),
-      PatchRequestSchema,
+      PatchRequest,
     );
 
     expect(result.success).toBe(true);
@@ -96,7 +96,7 @@ describe("SCIM request structure validation", () => {
             location: "https://example.test/Users/user-id",
           },
         },
-        UserResourceSchema,
+        UserResource,
       ),
     ).toThrow();
   });

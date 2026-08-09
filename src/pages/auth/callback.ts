@@ -1,7 +1,13 @@
 import type { APIRoute } from "astro";
-import { complete_oidc_login, replace_session, take_oidc_transaction } from "../../db";
-import { SESSION_COOKIE_NAME, session_cookie_options } from "../../lib/console_context";
-import { get_oidc_configuration, oidc } from "../../lib/oidc";
+import {
+  complete_oidc_login,
+  get_oidc_configuration,
+  oidc,
+  replace_session,
+  SESSION_COOKIE_NAME,
+  session_cookie_options,
+  take_oidc_transaction,
+} from "../../lib/application";
 import { APP_CONFIG } from "../../lib/config";
 
 export const prerender = false;

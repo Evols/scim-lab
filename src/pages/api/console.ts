@@ -8,8 +8,10 @@ import {
   rename_server,
   revoke_share_invite,
   rotate_server_auth,
-} from "../../db";
-import { FLASH_COOKIE_NAME, get_console_context, session_cookie_options } from "../../lib/console_context";
+  FLASH_COOKIE_NAME,
+  get_console_context,
+  session_cookie_options,
+} from "../../lib/application";
 
 export const prerender = false;
 

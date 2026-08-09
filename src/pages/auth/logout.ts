@@ -1,6 +1,5 @@
 import type { APIRoute } from "astro";
-import { delete_session } from "../../db";
-import { SESSION_COOKIE_NAME } from "../../lib/console_context";
+import { delete_session, SESSION_COOKIE_NAME } from "../../lib/application";
 
 export const prerender = false;
 

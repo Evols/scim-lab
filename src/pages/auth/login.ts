@@ -1,7 +1,5 @@
 import type { APIRoute } from "astro";
-import { save_oidc_transaction } from "../../db";
-import { get_console_context } from "../../lib/console_context";
-import { get_oidc_configuration, oidc } from "../../lib/oidc";
+import { get_console_context, get_oidc_configuration, oidc, save_oidc_transaction } from "../../lib/application";
 import { APP_CONFIG } from "../../lib/config";
 
 export const prerender = false;

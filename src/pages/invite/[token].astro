@@ -1,13 +1,12 @@
 ---
-import * as database from "../../db";
+import * as console_app from "../../lib/application";
 import Layout from "../../presentation/layouts/Layout.astro";
-import { get_console_context } from "../../lib/console_context";
 
 export const prerender = false;
 
 const token = String(Astro.params.token ?? "");
-const context = await get_console_context(Astro.cookies);
-const invite = await database.get_share_invite(token);
+const context = await console_app.get_console_context(Astro.cookies);
+const invite = await console_app.get_share_invite(token);
 let error_message = invite ? "" : "This sharing link is invalid, revoked, or expired.";
 
 if (Astro.request.method === "POST" && invite && !context.user.is_anonymous) {
@@ -16,7 +15,7 @@ if (Astro.request.method === "POST" && invite && !context.user.is_anonymous) {
     return new Response("Invalid request origin.", { status: 403 });
   }
   try {
-    return Astro.redirect(`/?server=${await database.accept_share_invite(context.user.id, token)}`, 303);
+    return Astro.redirect(`/?server=${await console_app.accept_share_invite(context.user.id, token)}`, 303);
   } catch (error) {
     error_message = error instanceof Error ? error.message : "The sharing link could not be accepted.";
   }

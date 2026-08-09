@@ -1,4 +1,5 @@
-import { db, prune_events } from "../../../db";
+import { and, eq, lt, sql } from "drizzle-orm";
+import { db } from "../../database";
 import { scim_events } from "../../../db/schema.ts";
 
 type DynamicObject = Record<string, unknown>;
@@ -65,4 +66,21 @@ export async function record_event(
     response_truncated: false,
   });
   await prune_events(server_id);
+}
+
+export async function prune_events(server_id: string): Promise<void> {
+  await db
+    .delete(scim_events)
+    .where(
+      and(eq(scim_events.server_id, server_id), lt(scim_events.created_at, new Date(Date.now() - 30 * 86_400_000))),
+    );
+  await db.execute(sql`
+		delete from ${scim_events}
+		where ${scim_events.server_id} = ${server_id}
+		and ${scim_events.id} not in (
+			select ${scim_events.id} from ${scim_events}
+			where ${scim_events.server_id} = ${server_id}
+			order by ${scim_events.id} desc limit 1000
+		)
+	`);
 }

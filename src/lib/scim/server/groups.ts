@@ -1,14 +1,13 @@
 import { and, asc, eq, inArray } from "drizzle-orm";
-import { db } from "../../../db";
+import { db } from "../../database";
 import { scim_group_members, scim_groups, scim_users } from "../../../db/schema.ts";
 import { matches_filter } from "./filter.ts";
 import { paginate, type ListQuery } from "./pagination.ts";
 import {
-  GroupMemberSchema,
+  GroupMember,
+  type GroupInput,
   type GroupListResponse,
-  type GroupMember,
   type GroupResource,
-  type GroupWriteInput,
   type PatchOperation,
 } from "../schemas.ts";
 import { ScimServiceError } from "./error.ts";
@@ -51,7 +50,7 @@ async function replace_group_members(server_id: string, group_id: string, member
 }
 
 function parse_group_members(value: unknown): GroupMember[] {
-  const result = GroupMemberSchema.array().safeParse(value);
+  const result = GroupMember.array().safeParse(value);
   if (!result.success) {
     throw new ScimServiceError("group_members_invalid", "Group members must be an array of member objects.");
   }
@@ -80,7 +79,7 @@ export async function get_group(server_id: string, group_id: string, origin: str
   return group_resource(await find_group(server_id, group_id), origin);
 }
 
-export async function create_group(server_id: string, input: GroupWriteInput, origin: string): Promise<GroupResource> {
+export async function create_group(server_id: string, input: GroupInput, origin: string): Promise<GroupResource> {
   const display_name = String(input.displayName ?? "").trim();
   if (!display_name) {
     throw new ScimServiceError("group_display_name_required", "displayName is required.");
@@ -111,7 +110,7 @@ export async function delete_group(server_id: string, group_id: string): Promise
 export async function replace_group(
   server_id: string,
   group_id: string,
-  input: GroupWriteInput,
+  input: GroupInput,
   origin: string,
 ): Promise<GroupResource> {
   const existing = await find_group(server_id, group_id);
