@@ -98,6 +98,7 @@ const selected_query = selected_server ? `?server=${selected_server.id}` : "";
     {
       selected_server && (
         <nav class="ml-1 hidden items-center gap-1 md:flex" aria-label="Server resources">
+          <ResourceLink label="Overview" href={`${selected_query}`} active={view === "overview"} />
           <ResourceLink label="Users" href={`${selected_query}&view=users`} active={view === "users"} />
           <ResourceLink label="Groups" href={`${selected_query}&view=groups`} active={view === "groups"} />
           <ResourceLink label="Logs" href={`${selected_query}&view=logs`} active={view === "logs"} />
