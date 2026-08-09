@@ -83,6 +83,18 @@ export async function complete_oidc_login(
       return upgraded;
     }
     const target = existing[0];
+    const [updated_target] = await transaction
+      .update(console_users)
+      .set({
+        email: identity.email ?? target.email,
+        display_name: identity.display_name ?? target.display_name,
+        updated_at: new Date(),
+      })
+      .where(eq(console_users.id, target.id))
+      .returning();
+    if (!updated_target) {
+      throw new Error("Unable to refresh account details.");
+    }
     const anonymous_memberships = await transaction
       .select()
       .from(server_members)
@@ -110,6 +122,6 @@ export async function complete_oidc_login(
     await transaction.delete(server_members).where(eq(server_members.user_id, anonymous_user_id));
     await transaction.delete(console_sessions).where(eq(console_sessions.user_id, anonymous_user_id));
     await transaction.delete(console_users).where(eq(console_users.id, anonymous_user_id));
-    return target;
+    return updated_target;
   });
 }

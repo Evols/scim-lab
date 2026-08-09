@@ -15,8 +15,10 @@ export async function get_oidc_configuration(): Promise<oidc.Configuration> {
       {
         client_secret: APP_CONFIG.oidc_client_secret,
         redirect_uris: [`${APP_CONFIG.app_origin}/auth/callback`],
+        response_types: ["code"],
+        token_endpoint_auth_method: "client_secret_basic",
       },
-      oidc.ClientSecretPost(APP_CONFIG.oidc_client_secret),
+      oidc.ClientSecretBasic(APP_CONFIG.oidc_client_secret),
     );
   }
 

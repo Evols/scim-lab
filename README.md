@@ -26,6 +26,7 @@ APP_SECRET=replace-with-at-least-32-random-bytes
 OIDC_ISSUER_URL=http://localhost:8080/realms/scim-lab
 OIDC_CLIENT_ID=scim-lab
 OIDC_CLIENT_SECRET=replace-with-your-oidc-client-secret
+OIDC_SCOPES=openid
 ```
 
 If OIDC is configured, register `${APP_ORIGIN}/auth/callback` as its redirect URI. Then install, migrate, and start:
@@ -56,10 +57,12 @@ Coolify discovers the variables referenced by `compose.yaml` and generates the d
 After the first deployment:
 
 1. Open `https://auth-admin.scimlab.dev` and create the initial Logto administrator.
-2. Under **Applications**, create a **Traditional web** application named `SCIM Lab`.
+2. Under **Applications**, create a **Third-party app**, choose **OIDC / OAuth** and **Traditional Web**, and name it `SCIM Lab`.
 3. Add `https://scimlab.dev/auth/callback` as an allowed redirect URI.
 4. Add `https://scimlab.dev` as an allowed post sign-out redirect URI.
-5. Copy the Logto App ID and App Secret into Coolify as `OIDC_CLIENT_ID` and `OIDC_CLIENT_SECRET`, then redeploy the stack. The issuer defaults to `https://auth.scimlab.dev/oidc`.
+5. Copy the Logto App Secret into Coolify as `OIDC_CLIENT_SECRET`, then redeploy the stack. The issuer and App ID default to `https://auth.scimlab.dev/oidc` and `z3kp8emdt0f9pvugrds1i` respectively.
+
+The configured Logto third-party application currently grants the core `openid` scope. To display names or email addresses in SCIM Lab, grant the `profile` and/or `email` permissions in the application's **Permissions** tab, then add those scopes to `OIDC_SCOPES` (for example, `openid profile email`). Requesting scopes before they are granted makes Logto reject the authorization request.
 
 The existing **Sign in** button sends users through this OIDC application. Signing out clears both the local SCIM Lab session and the centralized Logto session.
 

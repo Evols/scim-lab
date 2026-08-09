@@ -28,8 +28,9 @@ services:
       APP_SECRET: ${SERVICE_HEX_64_APP_SECRET}
 
       OIDC_ISSUER_URL: ${OIDC_ISSUER_URL:-https://auth.scimlab.dev/oidc}
-      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-}
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-z3kp8emdt0f9pvugrds1i}
       OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
+      OIDC_SCOPES: ${OIDC_SCOPES:-openid}
 
     healthcheck:
       test:
