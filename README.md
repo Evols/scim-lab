@@ -17,7 +17,7 @@ Create the database using your local Postgres instance:
 createdb -U postgres scim_lab
 ```
 
-Copy `.env.example` to `.env` and set a random `APP_SECRET` of at least 32 bytes. The included database URL assumes the local username and password are both `postgres`:
+Local development defaults to a PostgreSQL database named `scim_lab` with `postgres` as both the username and password. Anonymous use needs no environment file. To override the defaults or enable OIDC login and sharing, optionally create an ignored `.env` file:
 
 ```dotenv
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/scim_lab
@@ -28,7 +28,7 @@ OIDC_CLIENT_ID=scim-lab
 OIDC_CLIENT_SECRET=replace-with-your-oidc-client-secret
 ```
 
-Register `${APP_ORIGIN}/auth/callback` as the OIDC redirect URI, then install, migrate, and start:
+If OIDC is configured, register `${APP_ORIGIN}/auth/callback` as its redirect URI. Then install, migrate, and start:
 
 ```sh
 pnpm install
@@ -38,16 +38,15 @@ pnpm astro dev --background
 
 Use `pnpm astro dev status`, `pnpm astro dev logs`, and `pnpm astro dev stop` to manage the background server.
 
-## Production
+## Production on Coolify
 
-Build and run the standalone Astro Node server behind an HTTPS reverse proxy:
+Create a Docker Compose resource in Coolify from this repository. The stack runs the Astro Node server and PostgreSQL, and database migrations complete before the application starts.
 
-```sh
-pnpm build
-HOST=0.0.0.0 PORT=4321 pnpm start
-```
+Use Caddy as the proxy on the Coolify server. In the resource configuration, assign the `application` service the domain `https://scimlab.dev:4321`. The port suffix tells Coolify which internal container port to proxy; public traffic still uses standard HTTPS port 443. Point the domain's `A` and/or `AAAA` records at the server.
 
-Run `pnpm db:migrate` before starting a new release. Keep `APP_SECRET`, `OIDC_CLIENT_SECRET`, and `DATABASE_URL` out of source control.
+Coolify discovers the variables referenced by `compose.yaml`. It automatically generates `SERVICE_PASSWORD_64_DATABASE` and `SERVICE_HEX_64_APPLICATION`; no production `.env` file is needed. `APP_ORIGIN` defaults to `https://scimlab.dev`. Set the optional OIDC values in Coolify's Environment Variables screen and, when enabled, register `https://scimlab.dev/auth/callback` as the redirect URI.
+
+PostgreSQL state is retained in the `pgdata` named volume. Keep database backups and all secrets out of source control.
 
 ## Supported SCIM surface
 
