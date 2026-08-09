@@ -2,7 +2,7 @@ import type { APIRoute } from "astro";
 import { save_oidc_transaction } from "../../db";
 import { get_console_context } from "../../lib/console_context";
 import { get_oidc_configuration, oidc } from "../../lib/oidc";
-import { app_config } from "../../lib/config";
+import { APP_CONFIG } from "../../lib/config";
 
 export const prerender = false;
 
@@ -20,7 +20,7 @@ export const GET: APIRoute = async ({ cookies, redirect, url }) => {
   const code_challenge = await oidc.calculatePKCECodeChallenge(code_verifier);
   await save_oidc_transaction(context.user.id, state, code_verifier, nonce, return_to);
   const authorization_url = oidc.buildAuthorizationUrl(configuration, {
-    redirect_uri: `${app_config.app_origin}/auth/callback`,
+    redirect_uri: `${APP_CONFIG.app_origin}/auth/callback`,
     response_type: "code",
     scope: "openid profile email",
     state,

@@ -33,7 +33,7 @@ export function service_provider_config(server: ScimServerRecord): ServiceProvid
 }
 
 // These documents describe the subset of core SCIM attributes this lab accepts.
-export const schema_documents = SchemaDocument.array().parse([
+export const SCHEMA_DOCUMENTS = SchemaDocument.array().parse([
   {
     schemas: ["urn:ietf:params:scim:schemas:core:2.0:Schema"],
     id: USER_SCHEMA,
@@ -162,7 +162,7 @@ export const schema_documents = SchemaDocument.array().parse([
   },
 ]);
 
-export const resource_types = ResourceType.array().parse([
+export const RESOURCE_TYPES = ResourceType.array().parse([
   {
     schemas: ["urn:ietf:params:scim:schemas:core:2.0:ResourceType"],
     id: "User",

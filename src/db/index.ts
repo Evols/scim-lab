@@ -1,7 +1,7 @@
 import { and, asc, count, desc, eq, gt, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import { app_config } from "../lib/config";
+import { APP_CONFIG } from "../lib/config";
 import {
   decrypt_secret,
   encrypt_secret,
@@ -26,8 +26,8 @@ import {
   type ScimServerRecord,
 } from "./schema";
 
-const query_client = postgres(app_config.database_url, { max: 10 });
-export const db = drizzle({ client: query_client });
+const QUERY_CLIENT = postgres(APP_CONFIG.database_url, { max: 10 });
+export const db = drizzle({ client: QUERY_CLIENT });
 
 export interface ConsoleContext {
   user: ConsoleUserRecord;

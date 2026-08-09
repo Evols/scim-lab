@@ -136,19 +136,19 @@ export const GroupResourceSchema = z.looseObject({
 export type GroupResource = z.infer<typeof GroupResourceSchema>;
 export type ScimResource = UserResource | GroupResource;
 
-export function ListResponseSchema<S extends z.ZodType>(resourceSchema: S) {
+export function make_list_response_schema<S extends z.ZodType>(resource_schema: S) {
   return z.object({
     schemas: z.tuple([z.literal(LIST_SCHEMA)]),
     totalResults: z.number().int().nonnegative(),
     startIndex: z.number().int().positive(),
     itemsPerPage: z.number().int().nonnegative(),
-    Resources: z.array(resourceSchema),
+    Resources: z.array(resource_schema),
   });
 }
 
-export const UserListResponseSchema = ListResponseSchema(UserResourceSchema);
+export const UserListResponseSchema = make_list_response_schema(UserResourceSchema);
 export type UserListResponse = z.infer<typeof UserListResponseSchema>;
-export const GroupListResponseSchema = ListResponseSchema(GroupResourceSchema);
+export const GroupListResponseSchema = make_list_response_schema(GroupResourceSchema);
 export type GroupListResponse = z.infer<typeof GroupListResponseSchema>;
 
 export const ScimErrorSchema = z.object({
@@ -211,7 +211,7 @@ export const SchemaDocument = z.object({
   attributes: z.array(SchemaAttribute),
 });
 export type SchemaDocument = z.infer<typeof SchemaDocument>;
-export const SchemaDocumentListSchema = ListResponseSchema(SchemaDocument);
+export const SchemaDocumentListSchema = make_list_response_schema(SchemaDocument);
 
 export const ResourceType = z.object({
   schemas: z.array(z.string()),
@@ -221,4 +221,4 @@ export const ResourceType = z.object({
   schema: z.string(),
 });
 export type ResourceType = z.infer<typeof ResourceType>;
-export const ResourceTypeListSchema = ListResponseSchema(ResourceType);
+export const ResourceTypeListSchema = make_list_response_schema(ResourceType);

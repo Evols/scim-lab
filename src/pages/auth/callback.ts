@@ -1,8 +1,8 @@
 import type { APIRoute } from "astro";
 import { complete_oidc_login, replace_session, take_oidc_transaction } from "../../db";
-import { session_cookie_name, session_cookie_options } from "../../lib/console_context";
+import { SESSION_COOKIE_NAME, session_cookie_options } from "../../lib/console_context";
 import { get_oidc_configuration, oidc } from "../../lib/oidc";
-import { app_config } from "../../lib/config";
+import { APP_CONFIG } from "../../lib/config";
 
 export const prerender = false;
 
@@ -19,7 +19,7 @@ export const GET: APIRoute = async ({ cookies, redirect, url }) => {
   }
   try {
     const configuration = await get_oidc_configuration();
-    const callback_url = new URL("/auth/callback", app_config.app_origin);
+    const callback_url = new URL("/auth/callback", APP_CONFIG.app_origin);
     callback_url.search = url.search;
     const tokens = await oidc.authorizationCodeGrant(configuration, callback_url, {
       pkceCodeVerifier: transaction.code_verifier,
@@ -38,7 +38,7 @@ export const GET: APIRoute = async ({ cookies, redirect, url }) => {
       display_name: typeof claims.name === "string" ? claims.name : undefined,
     });
     const session_token = await replace_session(user.id);
-    cookies.set(session_cookie_name, session_token, session_cookie_options());
+    cookies.set(SESSION_COOKIE_NAME, session_token, session_cookie_options());
     return redirect(transaction.return_to, 303);
   } catch (error) {
     console.error("OIDC callback failed", error);

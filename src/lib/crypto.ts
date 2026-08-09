@@ -1,9 +1,9 @@
 import { createCipheriv, createDecipheriv, createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
-import { app_config } from "./config";
+import { APP_CONFIG } from "./config";
 
-const credential_encryption_key = createHash("sha256")
+const CREDENTIAL_ENCRYPTION_KEY = createHash("sha256")
   .update("scim-lab:credential-encryption:v1\0")
-  .update(app_config.app_secret)
+  .update(APP_CONFIG.app_secret)
   .digest();
 
 export function random_secret(bytes = 32): string {
@@ -11,7 +11,7 @@ export function random_secret(bytes = 32): string {
 }
 
 export function hash_secret(value: string): string {
-  return createHmac("sha256", app_config.app_secret).update(value).digest("hex");
+  return createHmac("sha256", APP_CONFIG.app_secret).update(value).digest("hex");
 }
 
 export function safe_hash_equal(stored_hash: string | null, candidate: string): boolean {
@@ -26,7 +26,7 @@ export function safe_hash_equal(stored_hash: string | null, candidate: string): 
 
 export function encrypt_secret(value: string): string {
   const initialization_vector = randomBytes(12);
-  const cipher = createCipheriv("aes-256-gcm", credential_encryption_key, initialization_vector);
+  const cipher = createCipheriv("aes-256-gcm", CREDENTIAL_ENCRYPTION_KEY, initialization_vector);
   const encrypted = Buffer.concat([cipher.update(value, "utf8"), cipher.final()]);
   const authentication_tag = cipher.getAuthTag();
   return [
@@ -44,7 +44,7 @@ export function decrypt_secret(value: string): string {
   }
   const decipher = createDecipheriv(
     "aes-256-gcm",
-    credential_encryption_key,
+    CREDENTIAL_ENCRYPTION_KEY,
     Buffer.from(initialization_vector, "base64url"),
   );
   decipher.setAuthTag(Buffer.from(authentication_tag, "base64url"));

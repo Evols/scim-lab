@@ -9,7 +9,7 @@ import {
   revoke_share_invite,
   rotate_server_auth,
 } from "../../db";
-import { flash_cookie_name, get_console_context, session_cookie_options } from "../../lib/console_context";
+import { FLASH_COOKIE_NAME, get_console_context, session_cookie_options } from "../../lib/console_context";
 
 export const prerender = false;
 
@@ -76,7 +76,7 @@ export const POST: APIRoute = async ({ cookies, redirect, request, url }) => {
   }
   if (flash) {
     const token = await create_flash(context.user.id, flash);
-    cookies.set(flash_cookie_name, token, {
+    cookies.set(FLASH_COOKIE_NAME, token, {
       ...session_cookie_options(300),
       maxAge: 300,
     });

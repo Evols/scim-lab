@@ -5,7 +5,7 @@ import {
   take_flash,
   type ConsoleContext,
 } from "../db";
-import { app_config } from "./config";
+import { APP_CONFIG } from "./config";
 
 interface CookieValue {
   value: string;
@@ -17,13 +17,13 @@ export interface CookieStore {
   delete(name: string, options?: Record<string, unknown>): void;
 }
 
-export const session_cookie_name = "scim_lab_session";
-export const flash_cookie_name = "scim_lab_flash";
+export const SESSION_COOKIE_NAME = "scim_lab_session";
+export const FLASH_COOKIE_NAME = "scim_lab_flash";
 
 export function session_cookie_options(max_age = 30 * 86_400) {
   return {
     httpOnly: true,
-    secure: app_config.is_production,
+    secure: APP_CONFIG.is_production,
     sameSite: "lax" as const,
     path: "/",
     maxAge: max_age,
@@ -32,7 +32,7 @@ export function session_cookie_options(max_age = 30 * 86_400) {
 
 export async function get_console_context(cookies: CookieStore): Promise<ConsoleContext> {
   await purge_expired_records();
-  const raw_token = cookies.get(session_cookie_name)?.value;
+  const raw_token = cookies.get(SESSION_COOKIE_NAME)?.value;
   if (raw_token) {
     const context = await find_console_session(raw_token);
     if (context) {
@@ -40,15 +40,15 @@ export async function get_console_context(cookies: CookieStore): Promise<Console
     }
   }
   const context = await create_anonymous_context();
-  cookies.set(session_cookie_name, context.session_token!, session_cookie_options(37 * 86_400));
+  cookies.set(SESSION_COOKIE_NAME, context.session_token!, session_cookie_options(37 * 86_400));
   return context;
 }
 
 export async function get_flash(cookies: CookieStore, user_id: string): Promise<Record<string, unknown> | null> {
-  const token = cookies.get(flash_cookie_name)?.value;
+  const token = cookies.get(FLASH_COOKIE_NAME)?.value;
   if (!token) {
     return null;
   }
-  cookies.delete(flash_cookie_name, { path: "/" });
+  cookies.delete(FLASH_COOKIE_NAME, { path: "/" });
   return take_flash(user_id, token);
 }

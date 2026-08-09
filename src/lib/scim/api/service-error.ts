@@ -6,7 +6,7 @@ type ErrorMapping = {
   scim_type?: string;
 };
 
-const error_mappings: Record<ScimServiceError["code"], ErrorMapping> = {
+const ERROR_MAPPINGS: Record<ScimServiceError["code"], ErrorMapping> = {
   filter_invalid: { status: 400, scim_type: "invalidFilter" },
   group_display_name_required: { status: 400, scim_type: "invalidValue" },
   group_members_invalid: { status: 400, scim_type: "invalidValue" },
@@ -28,6 +28,6 @@ export function service_error_response(error: unknown): Response | null {
   if (!(error instanceof ScimServiceError)) {
     return null;
   }
-  const mapping = error_mappings[error.code];
+  const mapping = ERROR_MAPPINGS[error.code];
   return scim_error(mapping.status, error.message, mapping.scim_type);
 }
