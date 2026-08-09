@@ -10,6 +10,7 @@ const {
   title = "SCIM Lab — Provisioning without the ceremony",
   description = "Create a working SCIM v2 server in seconds, inspect every request, and test identity provisioning safely.",
 } = Astro.props;
+const current_year = new Date().getFullYear();
 ---
 
 <!doctype html>
@@ -31,5 +32,13 @@ const {
     class="min-h-screen min-w-80 bg-[#fafafa] font-sans text-[#09090b] antialiased selection:bg-[#e4e4e7] selection:text-[#09090b]"
   >
     <slot />
+    <footer class="border-t border-[#e4e4e7] px-4 py-5 text-center text-xs text-[#71717a]">
+      <a
+        class="font-medium text-[#52525b] underline decoration-[#d4d4d8] underline-offset-4 hover:text-[#09090b]"
+        href="https://github.com/Evols"
+        target="_blank"
+        rel="noreferrer">Baptiste Hutteau</a
+      > · {current_year}
+    </footer>
   </body>
 </html>
