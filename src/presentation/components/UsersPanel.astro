@@ -169,12 +169,11 @@ const user_details = new Map(
                                   Copy JSON
                                 </button>
                               </div>
-                              <pre class="max-h-80 overflow-auto bg-[#18181b] p-4 text-[11px] leading-5 text-[#d4d4d8] sm:text-xs">
-                                <code>{details}</code>
-                              </pre>
-                              <textarea class="sr-only" tabindex="-1" aria-hidden="true" data-user-json>
-                                {details}
-                              </textarea>
+                              <pre
+                                class="max-h-80 overflow-auto bg-[#18181b] p-4 text-[11px] leading-5 text-[#d4d4d8] sm:text-xs"
+                                data-user-json
+                                set:text={details}
+                              />
                             </div>
                           </div>
                         </td>
@@ -232,9 +231,9 @@ const user_details = new Map(
 
   document.querySelectorAll<HTMLButtonElement>("[data-user-copy]").forEach((button) => {
     button.addEventListener("click", async () => {
-      const source = button.closest("td")?.querySelector<HTMLTextAreaElement>("[data-user-json]");
+      const source = button.closest("td")?.querySelector<HTMLElement>("[data-user-json]");
       if (!source) return;
-      await navigator.clipboard.writeText(source.value);
+      await navigator.clipboard.writeText(source.textContent ?? "");
       button.textContent = "Copied";
       window.setTimeout(() => {
         button.textContent = "Copy JSON";

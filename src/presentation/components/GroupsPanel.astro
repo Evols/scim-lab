@@ -173,12 +173,11 @@ const group_details = new Map(
                             Copy JSON
                           </button>
                         </header>
-                        <pre class="max-h-80 overflow-auto bg-[#18181b] p-4 text-[11px] leading-5 text-[#d4d4d8] sm:text-xs">
-                          <code>{details}</code>
-                        </pre>
-                        <textarea class="sr-only" tabindex="-1" aria-hidden="true" data-group-json>
-                          {details}
-                        </textarea>
+                        <pre
+                          class="max-h-80 overflow-auto bg-[#18181b] p-4 text-[11px] leading-5 text-[#d4d4d8] sm:text-xs"
+                          data-group-json
+                          set:text={details}
+                        />
                       </section>
                     </div>
                   </div>
@@ -209,9 +208,9 @@ const group_details = new Map(
 <script>
   document.querySelectorAll<HTMLButtonElement>("[data-group-copy]").forEach((button) => {
     button.addEventListener("click", async () => {
-      const source = button.closest("section")?.querySelector<HTMLTextAreaElement>("[data-group-json]");
+      const source = button.closest("section")?.querySelector<HTMLElement>("[data-group-json]");
       if (!source) return;
-      await navigator.clipboard.writeText(source.value);
+      await navigator.clipboard.writeText(source.textContent ?? "");
       button.textContent = "Copied";
       window.setTimeout(() => {
         button.textContent = "Copy JSON";
