@@ -25,8 +25,8 @@ describe("console data", () => {
         ])
         .returning();
       await transaction.insert(scim_group_members).values([
-        { group_id: engineering!.id, user_id: zoe!.id },
-        { group_id: engineering!.id, user_id: ada!.id },
+        { group_id: engineering!.id, member_id: zoe!.id, member_type: "User" },
+        { group_id: engineering!.id, member_id: ada!.id, member_type: "User" },
       ]);
       await transaction.insert(scim_events).values({
         server_id: created.server.id,

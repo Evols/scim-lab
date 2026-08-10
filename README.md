@@ -81,10 +81,15 @@ SCIM Lab data, Logto data, and installed Logto connectors are retained in named 
 
 ## Supported SCIM surface
 
-- Users and Groups: GET, POST, PUT, PATCH, DELETE
-- Filtering, one-based pagination, and Group membership
-- ServiceProviderConfig, Schemas, and ResourceTypes discovery
+- Users and Groups: GET, POST, PUT, PATCH, and DELETE with SCIM error responses
+- The RFC 7644 filter grammar, sorting, one-based pagination, attribute projection, root queries, and POST `/.search`
+- Atomic SCIM PATCH operations, including value-path filters and primary-value handling
+- Bulk requests with `bulkId` references, `failOnErrors`, and advertised operation/payload limits
+- Weak ETags, conditional GET, conditional PUT/PATCH/DELETE, Location, and Content-Location headers
+- Direct and nested Group membership, including direct/indirect membership on User resources
+- The RFC 7643 enterprise User extension and opaque vendor-extension round trips
+- ServiceProviderConfig, Schemas, and ResourceTypes discovery with complete core attribute metadata
 - Bearer token or HTTP Basic authentication, one active mode per server
 - 100 users and 1,000 retained events per server; events expire after 30 days
 
-Bulk, sorting, ETags, enterprise extensions, and custom schemas are intentionally deferred.
+Password-based login for provisioned Users and the optional `/Me` subject alias are not part of this sandbox's client-credential model; `changePassword.supported` is therefore advertised as `false`.

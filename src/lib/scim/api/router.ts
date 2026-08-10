@@ -8,6 +8,8 @@ import { scim_error } from "./error.ts";
 import { record_event } from "./events.ts";
 import { handle_groups } from "./groups.ts";
 import { handle_users } from "./users.ts";
+import { bulk_response } from "./bulk.ts";
+import { search_response } from "./search.ts";
 
 export async function handle_scim_request(
   request: Request,
@@ -54,10 +56,24 @@ export async function handle_scim_request(
     const [resource, resource_id] = segments;
     const url = new URL(request.url);
     try {
-      if (resource === "Users") {
-        response = await handle_users(request.method, resource_id, server, url.origin, url, raw_body);
-      } else if (resource === "Groups") {
-        response = await handle_groups(request.method, resource_id, server, url.origin, url, raw_body);
+      if (request.method === "POST" && resource === "Bulk" && !resource_id) {
+        response = await bulk_response(server, url.origin, raw_body);
+      } else if (request.method === "POST" && resource === ".search" && !resource_id) {
+        response = await search_response("root", server, url.origin, url, raw_body);
+      } else if (
+        request.method === "POST" &&
+        resource_id === ".search" &&
+        (resource === "Users" || resource === "Groups")
+      ) {
+        response = await search_response(resource, server, url.origin, url, raw_body);
+      } else if (request.method === "GET" && !resource) {
+        response = await search_response("root", server, url.origin, url);
+      } else if (resource === "Users" && segments.length <= 2) {
+        response = await handle_users(request.method, resource_id, server, url.origin, url, raw_body, request.headers);
+      } else if (resource === "Groups" && segments.length <= 2) {
+        response = await handle_groups(request.method, resource_id, server, url.origin, url, raw_body, request.headers);
+      } else if (segments.length > 2) {
+        response = scim_error(404, "SCIM resource not found.");
       } else if (request.method !== "GET") {
         response = scim_error(405, "Method not allowed.");
       } else response = discovery_response(resource, resource_id, server, url);
