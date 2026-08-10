@@ -24,7 +24,7 @@ describe("RFC 7643/7644 discovery resources", () => {
     expect(config.filter).toEqual({ supported: true, maxResults: 100 });
     expect(config.sort).toEqual({ supported: true });
     expect(config.etag).toEqual({ supported: true });
-    expect(config.changePassword).toEqual({ supported: false });
+    expect(config.changePassword).toEqual({ supported: true });
     expect(config.authenticationSchemes).toEqual([
       expect.objectContaining({ type: "oauthbearertoken", primary: true }),
     ]);

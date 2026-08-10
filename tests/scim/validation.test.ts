@@ -52,12 +52,16 @@ describe("RFC request and response structure validation", () => {
     expect(error.detail).toContain("userName");
   });
 
-  it("rejects password writes when changePassword is advertised as unsupported", async () => {
+  it("accepts write-only passwords but rejects non-string values", async () => {
+    const valid = validate_json_body(
+      JSON.stringify({ schemas: [USER_SCHEMA_URI], userName: "ada", password: "secret" }),
+      UserInput,
+    );
+    expect(valid.success).toBe(true);
+    if (valid.success) expect(valid.data.password).toBe("secret");
+
     const error = await error_payload(
-      validate_json_body(
-        JSON.stringify({ schemas: [USER_SCHEMA_URI], userName: "ada", password: "secret" }),
-        UserInput,
-      ),
+      validate_json_body(JSON.stringify({ schemas: [USER_SCHEMA_URI], userName: "ada", password: 42 }), UserInput),
     );
     expect(error).toMatchObject({ scimType: "invalidValue", status: "400" });
     expect(error.detail).toContain("password");
@@ -156,5 +160,21 @@ describe("RFC request and response structure validation", () => {
         UserResource,
       ),
     ).toThrow();
+    expect(
+      UserResource.safeParse({
+        schemas: [USER_SCHEMA_URI],
+        id: "1",
+        userName: "ada",
+        active: true,
+        password: "must-never-be-returned",
+        meta: {
+          resourceType: "User",
+          created: new Date().toISOString(),
+          lastModified: new Date().toISOString(),
+          version: 'W/"1"',
+          location: "https://example.test/Users/1",
+        },
+      }).success,
+    ).toBe(false);
   });
 });

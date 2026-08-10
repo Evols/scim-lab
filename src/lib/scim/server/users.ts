@@ -1,5 +1,6 @@
 import { and, asc, count, eq, sql } from "drizzle-orm";
 import { db } from "../../database";
+import { hash_scim_password } from "../../crypto.ts";
 import { scim_group_members, scim_users } from "../../../db/schema.ts";
 import { matches_filter } from "./filter.ts";
 import { paginate, type ListQuery } from "./pagination.ts";
@@ -13,6 +14,7 @@ import {
 } from "../schemas.ts";
 import { ScimServiceError } from "./error.ts";
 import { apply_patch } from "./patch.ts";
+import { isolate_password_patch } from "./password.ts";
 import { clean_user_payload, user_resource } from "./resources.ts";
 
 async function find_user(server_id: string, user_id: string) {
@@ -96,6 +98,7 @@ export async function create_user(server_id: string, input: UserInput, origin: s
           user_name,
           display_name: input.displayName ? String(input.displayName) : null,
           active: input.active == null ? true : input.active,
+          password_hash: input.password ? hash_scim_password(input.password) : null,
           data: clean_user_payload(input),
         })
         .returning();
@@ -136,6 +139,9 @@ export async function replace_user(
   }
 
   try {
+    const password_update = Object.hasOwn(input, "password")
+      ? { password_hash: input.password ? hash_scim_password(input.password) : null }
+      : {};
     const [updated] = await db
       .update(scim_users)
       .set({
@@ -143,6 +149,7 @@ export async function replace_user(
         user_name,
         display_name: input.displayName ? String(input.displayName) : null,
         active: input.active == null ? true : input.active,
+        ...password_update,
         data: clean_user_payload(input),
         version: existing.version + 1,
         updated_at: new Date(),
@@ -166,7 +173,8 @@ export async function patch_user(
   origin: string,
 ): Promise<UserResource> {
   const existing = await find_user(server_id, user_id);
-  const patched = apply_patch(await user_resource(existing, origin), operations);
+  const password_patch = isolate_password_patch(operations);
+  const patched = apply_patch(await user_resource(existing, origin), password_patch.operations);
   if (patched.active == null) patched.active = true;
   const validation = UserResourceSchema.safeParse(patched);
   if (!validation.success) {
@@ -186,6 +194,9 @@ export async function patch_user(
         user_name,
         display_name: resource.displayName ? String(resource.displayName) : null,
         active: resource.active === undefined ? true : Boolean(resource.active),
+        ...(password_patch.password !== undefined
+          ? { password_hash: password_patch.password ? hash_scim_password(password_patch.password) : null }
+          : {}),
         data: clean_user_payload(resource),
         version: existing.version + 1,
         updated_at: new Date(),

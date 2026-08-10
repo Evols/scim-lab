@@ -110,9 +110,6 @@ export type UserData = z.infer<typeof UserData>;
 // Loose objects preserve extension URNs and vendor attributes. The known core
 // attributes still receive runtime validation and useful inferred types.
 export const UserInput = z.looseObject(user_attributes).superRefine((value, context) => {
-  if (value.password !== undefined && value.password !== null) {
-    context.addIssue({ code: "custom", path: ["password"], message: "password changes are not supported" });
-  }
   for (const key of Object.keys(value).filter((key) => key.includes(":") && key !== USER_SCHEMA_URI)) {
     if (!value.schemas.includes(key))
       context.addIssue({ code: "custom", path: ["schemas"], message: `schemas must include ${key}` });
