@@ -75,7 +75,7 @@ const group_details = new Map(
                   >
                     ›
                   </span>
-                  <span class="grid size-9 shrink-0 place-items-center rounded-md border border-[#e4e4e7] bg-[#fafafa] text-xs font-medium text-[#71717a]">
+                  <span class="hidden size-9 shrink-0 place-items-center rounded-md border border-[#e4e4e7] bg-[#fafafa] text-xs font-medium text-[#71717a] sm:grid">
                     G
                   </span>
                   <div class="min-w-0 flex-1">
@@ -83,7 +83,8 @@ const group_details = new Map(
                     <p class="mt-0.5 truncate font-mono text-[11px] text-[#a1a1aa]">{group.external_id ?? group.id}</p>
                   </div>
                   <span class="rounded-md bg-[#f4f4f5] px-2 py-1 text-xs font-medium text-[#52525b]">
-                    {group.member_count} {group.member_count === 1 ? "member" : "members"}
+                    {group.member_count}
+                    <span class="hidden sm:inline"> {group.member_count === 1 ? "member" : "members"}</span>
                   </span>
                   <time class="hidden w-28 text-right text-xs text-[#71717a] sm:block">
                     {group.updated_at.toLocaleDateString("en", { dateStyle: "medium" })}

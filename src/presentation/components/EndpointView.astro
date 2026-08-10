@@ -14,8 +14,10 @@ const endpoint = `${origin}/scim/${server.id}/v2`;
 const credential_label = anonymous_credential?.auth_mode === "basic" ? "Password" : "Bearer token";
 ---
 
-<main class="grid min-h-[calc(100vh-3.5rem)] place-items-center px-4 py-16">
-  <section class="w-full max-w-3xl text-center" aria-labelledby={is_anonymous ? "landing-title" : undefined}>
+<main
+  class="flex min-h-[calc(100svh-6.5rem)] w-full min-w-0 items-center justify-center px-4 py-10 md:min-h-[calc(100vh-3.5rem)] md:py-16"
+>
+  <section class="w-full min-w-0 max-w-3xl text-center" aria-labelledby={is_anonymous ? "landing-title" : undefined}>
     <div
       class="mx-auto mb-5 inline-flex items-center gap-2 rounded-full border border-[#e4e4e7] bg-white px-3 py-1 text-xs font-medium text-[#52525b] shadow-xs"
     >
@@ -25,18 +27,18 @@ const credential_label = anonymous_credential?.auth_mode === "basic" ? "Password
       is_anonymous && (
         <h1
           id="landing-title"
-          class="mx-auto max-w-2xl text-balance text-4xl font-semibold tracking-[-0.045em] text-[#09090b] sm:text-5xl"
+          class="mx-auto max-w-2xl text-balance text-3xl font-semibold tracking-[-0.045em] text-[#09090b] sm:text-5xl"
         >
           A working SCIM server, yours to tinker with.
         </h1>
       )
     }
-    <p class="mx-auto mt-4 max-w-xl text-pretty text-base leading-7 text-[#71717a]">
+    <p class="mx-auto mt-4 max-w-xl text-pretty text-sm leading-6 text-[#71717a] sm:text-base sm:leading-7">
       Point your identity provider at the URL below. Users, groups, and every request are stored locally and ready to
       inspect.
     </p>
 
-    <div class="mt-10 space-y-3 text-left">
+    <div class="mt-8 min-w-0 space-y-3 text-left sm:mt-10">
       <div>
         <p id="endpoint-label" class="mb-2.5 text-sm font-medium text-[#3f3f46]">SCIM base URL</p>
         <div
@@ -56,7 +58,7 @@ const credential_label = anonymous_credential?.auth_mode === "basic" ? "Password
 
       {
         is_anonymous ? (
-          <div class="rounded-lg border border-[#e4e4e7] bg-white p-4 shadow-sm">
+          <div class="rounded-lg border border-[#e4e4e7] bg-white p-3 shadow-sm sm:p-4">
             <div class="mb-3 flex items-center justify-between gap-3">
               <>
                 <div>
@@ -113,11 +115,11 @@ const credential_label = anonymous_credential?.auth_mode === "basic" ? "Password
           </div>
         ) : (
           <div
-            class="rounded-lg border border-[#e4e4e7] bg-white p-4 shadow-sm"
+            class="rounded-lg border border-[#e4e4e7] bg-white p-3 shadow-sm sm:p-4"
             data-credential-card
             data-server-id={server.id}
           >
-            <div class="flex items-center justify-between gap-4">
+            <div class="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
               <>
                 <div>
                   <>
@@ -128,7 +130,7 @@ const credential_label = anonymous_credential?.auth_mode === "basic" ? "Password
                   </>
                 </div>
                 <button
-                  class="h-9 shrink-0 cursor-pointer rounded-md border border-[#d4d4d8] bg-white px-3 text-xs font-medium text-[#27272a] shadow-xs hover:bg-[#f4f4f5] disabled:cursor-wait disabled:opacity-60"
+                  class="h-10 w-full shrink-0 cursor-pointer rounded-md border border-[#d4d4d8] bg-white px-3 text-xs font-medium text-[#27272a] shadow-xs hover:bg-[#f4f4f5] disabled:cursor-wait disabled:opacity-60 sm:h-9 sm:w-auto"
                   type="button"
                   data-reveal-credential
                 >
