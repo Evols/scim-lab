@@ -38,9 +38,43 @@ export async function list_console_groups(server_id: string, database: Database)
   const members = group_ids.length
     ? await database.select().from(scim_group_members).where(inArray(scim_group_members.group_id, group_ids))
     : [];
+  const user_member_ids = members.filter((member) => member.member_type === "User").map((member) => member.member_id);
+  const users = user_member_ids.length
+    ? await database
+        .select()
+        .from(scim_users)
+        .where(and(eq(scim_users.server_id, server_id), inArray(scim_users.id, user_member_ids)))
+    : [];
+  const users_by_id = new Map(users.map((user) => [user.id, user]));
+  const groups_by_id = new Map(groups.map((group) => [group.id, group]));
+
   return groups.map((group) => ({
     ...group,
     member_count: members.filter((member) => member.group_id === group.id).length,
+    members: members
+      .filter((member) => member.group_id === group.id)
+      .map((member) => {
+        if (member.member_type === "User") {
+          const user = users_by_id.get(member.member_id);
+          return {
+            id: member.member_id,
+            type: "User" as const,
+            display_name: user?.display_name ?? user?.user_name ?? "Unknown user",
+            user_name: user?.user_name ?? null,
+            external_id: user?.external_id ?? null,
+          };
+        }
+
+        const member_group = groups_by_id.get(member.member_id);
+        return {
+          id: member.member_id,
+          type: "Group" as const,
+          display_name: member_group?.display_name ?? "Unknown group",
+          user_name: null,
+          external_id: member_group?.external_id ?? null,
+        };
+      })
+      .sort((left, right) => left.display_name.localeCompare(right.display_name)),
   }));
 }
 

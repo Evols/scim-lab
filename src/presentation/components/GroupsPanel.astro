@@ -1,15 +1,51 @@
 ---
-interface GroupRow {
+import type { ScimGroupRecord } from "../../db/schema.ts";
+
+interface GroupMemberRow {
   id: string;
+  type: "User" | "Group";
   display_name: string;
+  user_name: string | null;
   external_id: string | null;
-  member_count: number;
-  updated_at: Date;
 }
+type GroupRow = ScimGroupRecord & {
+  member_count: number;
+  members: GroupMemberRow[];
+};
 interface Props {
   groups: GroupRow[];
 }
 const { groups } = Astro.props;
+
+const group_details = new Map(
+  groups.map((group) => [
+    group.id,
+    JSON.stringify(
+      {
+        ...group.data,
+        id: group.id,
+        ...(group.external_id ? { externalId: group.external_id } : {}),
+        displayName: group.display_name,
+        ...(group.members.length
+          ? {
+              members: group.members.map((member) => ({
+                value: member.id,
+                display: member.display_name,
+                type: member.type,
+              })),
+            }
+          : {}),
+        meta: {
+          created: group.created_at.toISOString(),
+          lastModified: group.updated_at.toISOString(),
+          version: group.version,
+        },
+      },
+      null,
+      2,
+    ),
+  ]),
+);
 ---
 
 <div>
@@ -27,23 +63,129 @@ const { groups } = Astro.props;
     {
       groups.length ? (
         <div class="divide-y divide-[#e4e4e7]">
-          {groups.map((group) => (
-            <article class="flex items-center gap-4 px-4 py-3.5 hover:bg-[#fafafa]">
-              <span class="grid size-9 place-items-center rounded-md border border-[#e4e4e7] bg-[#fafafa] text-xs font-medium text-[#71717a]">
-                G
-              </span>
-              <div class="min-w-0 flex-1">
-                <p class="truncate text-sm font-medium">{group.display_name}</p>
-                <p class="mt-0.5 truncate font-mono text-[11px] text-[#a1a1aa]">{group.external_id ?? group.id}</p>
-              </div>
-              <span class="rounded-md bg-[#f4f4f5] px-2 py-1 text-xs font-medium text-[#52525b]">
-                {group.member_count} {group.member_count === 1 ? "member" : "members"}
-              </span>
-              <time class="hidden w-28 text-right text-xs text-[#71717a] sm:block">
-                {group.updated_at.toLocaleDateString("en", { dateStyle: "medium" })}
-              </time>
-            </article>
-          ))}
+          {groups.map((group) => {
+            const details = group_details.get(group.id) ?? "{}";
+            return (
+              <details class="group">
+                <summary class="flex cursor-pointer list-none items-center gap-3 px-4 py-3.5 transition hover:bg-[#fafafa] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#a1a1aa] sm:gap-4">
+                  <span
+                    class="text-lg leading-none text-[#a1a1aa] transition-transform group-open:rotate-90"
+                    aria-hidden="true"
+                  >
+                    ›
+                  </span>
+                  <span class="grid size-9 shrink-0 place-items-center rounded-md border border-[#e4e4e7] bg-[#fafafa] text-xs font-medium text-[#71717a]">
+                    G
+                  </span>
+                  <div class="min-w-0 flex-1">
+                    <p class="truncate text-sm font-medium">{group.display_name}</p>
+                    <p class="mt-0.5 truncate font-mono text-[11px] text-[#a1a1aa]">{group.external_id ?? group.id}</p>
+                  </div>
+                  <span class="rounded-md bg-[#f4f4f5] px-2 py-1 text-xs font-medium text-[#52525b]">
+                    {group.member_count} {group.member_count === 1 ? "member" : "members"}
+                  </span>
+                  <time class="hidden w-28 text-right text-xs text-[#71717a] sm:block">
+                    {group.updated_at.toLocaleDateString("en", { dateStyle: "medium" })}
+                  </time>
+                </summary>
+
+                <div class="border-t border-[#e4e4e7] bg-[#fafafa] px-4 py-4 sm:px-6">
+                  <div class="grid gap-4 lg:grid-cols-[minmax(0,0.7fr)_minmax(0,1.3fr)]">
+                    <div>
+                      <h2 class="text-xs font-semibold uppercase tracking-wider text-[#71717a]">Resource details</h2>
+                      <dl class="mt-3 grid gap-3 text-xs sm:grid-cols-2 lg:grid-cols-1">
+                        <div>
+                          <dt class="text-[#a1a1aa]">SCIM ID</dt>
+                          <dd class="mt-0.5 break-all font-mono text-[#3f3f46]">{group.id}</dd>
+                        </div>
+                        <div>
+                          <dt class="text-[#a1a1aa]">Created</dt>
+                          <dd class="mt-0.5 text-[#3f3f46]">
+                            {group.created_at.toLocaleString("en", {
+                              dateStyle: "medium",
+                              timeStyle: "short",
+                            })}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt class="text-[#a1a1aa]">Last modified</dt>
+                          <dd class="mt-0.5 text-[#3f3f46]">
+                            {group.updated_at.toLocaleString("en", {
+                              dateStyle: "medium",
+                              timeStyle: "short",
+                            })}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt class="text-[#a1a1aa]">Version</dt>
+                          <dd class="mt-0.5 font-mono text-[#3f3f46]">{group.version}</dd>
+                        </div>
+                      </dl>
+                    </div>
+
+                    <div class="min-w-0 space-y-3">
+                      <section class="overflow-hidden rounded-md border border-[#d4d4d8] bg-white">
+                        <header class="flex h-10 items-center justify-between border-b border-[#e4e4e7] px-3">
+                          <h2 class="text-xs font-semibold text-[#3f3f46]">Memberships</h2>
+                          <span class="rounded-full bg-[#f4f4f5] px-2 py-0.5 text-[11px] font-medium text-[#52525b]">
+                            {group.member_count}
+                          </span>
+                        </header>
+                        {group.members.length ? (
+                          <ul class="max-h-64 divide-y divide-[#e4e4e7] overflow-auto">
+                            {group.members.map((member) => (
+                              <li class="flex items-center gap-3 px-3 py-2.5">
+                                <span
+                                  class:list={[
+                                    "grid size-7 shrink-0 place-items-center rounded-md text-[10px] font-semibold",
+                                    member.type === "User"
+                                      ? "bg-[#eff6ff] text-[#2563eb]"
+                                      : "bg-[#f5f3ff] text-[#7c3aed]",
+                                  ]}
+                                >
+                                  {member.type === "User" ? "U" : "G"}
+                                </span>
+                                <div class="min-w-0 flex-1">
+                                  <p class="truncate text-xs font-medium text-[#3f3f46]">{member.display_name}</p>
+                                  <p class="mt-0.5 truncate font-mono text-[10px] text-[#a1a1aa]">
+                                    {member.user_name ?? member.external_id ?? member.id}
+                                  </p>
+                                </div>
+                                <span class="text-[10px] font-medium uppercase tracking-wide text-[#a1a1aa]">
+                                  {member.type}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p class="px-3 py-5 text-center text-xs text-[#a1a1aa]">This group has no members.</p>
+                        )}
+                      </section>
+
+                      <section class="overflow-hidden rounded-md border border-[#d4d4d8] bg-white">
+                        <header class="flex h-10 items-center justify-between border-b border-[#e4e4e7] px-3">
+                          <h2 class="text-xs font-semibold text-[#3f3f46]">SCIM attributes</h2>
+                          <button
+                            class="h-7 cursor-pointer rounded-md px-2.5 text-[11px] font-medium text-[#52525b] transition hover:bg-[#f4f4f5] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#a1a1aa]"
+                            type="button"
+                            data-group-copy
+                          >
+                            Copy JSON
+                          </button>
+                        </header>
+                        <pre class="max-h-80 overflow-auto bg-[#18181b] p-4 text-[11px] leading-5 text-[#d4d4d8] sm:text-xs">
+                          <code>{details}</code>
+                        </pre>
+                        <textarea class="sr-only" tabindex="-1" aria-hidden="true" data-group-json>
+                          {details}
+                        </textarea>
+                      </section>
+                    </div>
+                  </div>
+                </div>
+              </details>
+            );
+          })}
         </div>
       ) : (
         <div class="grid min-h-72 place-items-center px-6 py-12 text-center">
@@ -63,3 +205,17 @@ const { groups } = Astro.props;
     }
   </section>
 </div>
+
+<script>
+  document.querySelectorAll<HTMLButtonElement>("[data-group-copy]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const source = button.closest("section")?.querySelector<HTMLTextAreaElement>("[data-group-json]");
+      if (!source) return;
+      await navigator.clipboard.writeText(source.value);
+      button.textContent = "Copied";
+      window.setTimeout(() => {
+        button.textContent = "Copy JSON";
+      }, 1400);
+    });
+  });
+</script>
