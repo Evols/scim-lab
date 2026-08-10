@@ -134,17 +134,18 @@ const tone_classes =
   {
     raw_body ? (
       <div class="max-h-96 overflow-auto bg-[#111318] py-3" data-payload-scroll>
-        <pre class="m-0 min-w-max font-mono text-[11px] leading-6 sm:text-xs" data-payload-code>
-          <code>
+        <div class="min-w-max font-mono" data-payload-code>
+          <code class="block">
             {lines.map((line, index) => (
-              <span class="grid min-h-6 grid-cols-[3rem_minmax(0,1fr)]" data-payload-line>
+              <span class="grid min-h-5 grid-cols-[3rem_minmax(0,1fr)]" data-payload-line>
                 <span
-                  class="sticky left-0 z-10 select-none border-r border-white/5 bg-[#111318] pr-3 text-right text-[#52525b]"
+                  class="sticky left-0 z-10 select-none border-r border-white/5 bg-[#111318] pr-3 text-right text-[11px] leading-5 text-[#52525b] sm:text-xs"
                   aria-hidden="true"
+                  data-payload-line-number
                 >
                   {index + 1}
                 </span>
-                <span class="whitespace-pre px-4" data-payload-line-content>
+                <span class="px-4" data-payload-line-content>
                   {tokenize(line).map((token) => (
                     <span class={token_classes[token.kind]}>{token.value}</span>
                   ))}
@@ -152,7 +153,7 @@ const tone_classes =
               </span>
             ))}
           </code>
-        </pre>
+        </div>
       </div>
     ) : (
       <div class="grid min-h-44 place-items-center bg-[#111318] px-6 py-8 text-center">
@@ -171,11 +172,41 @@ const tone_classes =
 </article>
 
 <style>
+  /* Formatter indentation must not become visible space between code elements. */
+  [data-payload-code] {
+    font-size: 0;
+    line-height: 0;
+  }
+
+  [data-payload-line-number] {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  [data-payload-line-content] {
+    grid-column: 2;
+    grid-row: 1;
+    font-size: 0;
+    line-height: 0;
+  }
+
+  [data-payload-line-content] > span {
+    font-size: 0.6875rem;
+    line-height: 1.25rem;
+    white-space: pre;
+  }
+
+  @media (min-width: 40rem) {
+    [data-payload-line-content] > span {
+      font-size: 0.75rem;
+    }
+  }
+
   [data-payload-viewer][data-wrapped="true"] [data-payload-code] {
     min-width: 0;
   }
 
-  [data-payload-viewer][data-wrapped="true"] [data-payload-line-content] {
+  [data-payload-viewer][data-wrapped="true"] [data-payload-line-content] > span {
     white-space: pre-wrap;
     overflow-wrap: anywhere;
   }
