@@ -1,4 +1,12 @@
-import { createCipheriv, createDecipheriv, createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import {
+  createCipheriv,
+  createDecipheriv,
+  createHash,
+  createHmac,
+  randomBytes,
+  scryptSync,
+  timingSafeEqual,
+} from "node:crypto";
 import { APP_CONFIG } from "./config";
 
 const CREDENTIAL_ENCRYPTION_KEY = createHash("sha256")
@@ -22,6 +30,29 @@ export function safe_hash_equal(stored_hash: string | null, candidate: string): 
   const stored = Buffer.from(stored_hash, "hex");
   const compared = Buffer.from(candidate_hash, "hex");
   return stored.length === compared.length && timingSafeEqual(stored, compared);
+}
+
+export function hash_scim_password(value: string): string {
+  const salt = randomBytes(16);
+  const hash = scryptSync(value.normalize("NFC"), salt, 32);
+  return `scrypt-v1.${salt.toString("base64url")}.${hash.toString("base64url")}`;
+}
+
+export function safe_scim_password_equal(stored_hash: string | null, candidate: string): boolean {
+  if (!stored_hash) {
+    return false;
+  }
+  const [version, encoded_salt, encoded_hash] = stored_hash.split(".");
+  if (version !== "scrypt-v1" || !encoded_salt || !encoded_hash) {
+    return false;
+  }
+  try {
+    const expected = Buffer.from(encoded_hash, "base64url");
+    const compared = scryptSync(candidate.normalize("NFC"), Buffer.from(encoded_salt, "base64url"), expected.length);
+    return expected.length === compared.length && timingSafeEqual(expected, compared);
+  } catch {
+    return false;
+  }
 }
 
 export function encrypt_secret(value: string): string {

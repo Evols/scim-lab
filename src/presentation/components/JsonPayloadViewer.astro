@@ -1,4 +1,6 @@
 ---
+import { find_json_fold_ranges } from "../json-folding.ts";
+
 interface Props {
   label: string;
   body: string | null;
@@ -24,6 +26,7 @@ if (raw_body) {
 }
 
 const lines = formatted_body.split("\n");
+const fold_ranges = is_json ? find_json_fold_ranges(lines) : new Map();
 const byte_length = new TextEncoder().encode(raw_body ?? "").length;
 const size_label = byte_length < 1_000 ? `${byte_length} B` : `${(byte_length / 1_000).toFixed(1)} kB`;
 
@@ -134,25 +137,49 @@ const tone_classes =
   {
     raw_body ? (
       <div class="max-h-96 overflow-auto bg-[#111318] py-3" data-payload-scroll>
-        <pre class="m-0 min-w-max font-mono text-[11px] leading-6 sm:text-xs" data-payload-code>
-          <code>
+        <div class="min-w-max font-mono" data-payload-code>
+          <code class="block">
             {lines.map((line, index) => (
-              <span class="grid min-h-6 grid-cols-[3rem_minmax(0,1fr)]" data-payload-line>
+              <span class="grid min-h-5 grid-cols-[3rem_minmax(0,1fr)]" data-payload-line={index}>
                 <span
-                  class="sticky left-0 z-10 select-none border-r border-white/5 bg-[#111318] pr-3 text-right text-[#52525b]"
-                  aria-hidden="true"
+                  class="sticky left-0 z-10 grid grid-cols-[1rem_1fr] items-center border-r border-white/5 bg-[#111318] pr-2 text-[11px] leading-5 text-[#52525b] sm:text-xs"
+                  data-payload-line-number
                 >
-                  {index + 1}
+                  {fold_ranges.has(index) ? (
+                    <button
+                      class="grid size-4 cursor-pointer place-items-center rounded-sm text-[#71717a] hover:bg-white/5 hover:text-[#d4d4d8] focus-visible:outline-1 focus-visible:outline-[#71717a]"
+                      type="button"
+                      aria-expanded="true"
+                      aria-label={`Collapse lines ${index + 1} through ${fold_ranges.get(index)!.end + 1}`}
+                      data-payload-fold
+                      data-fold-start={index}
+                      data-fold-end={fold_ranges.get(index)!.end}
+                    >
+                      <span class="text-sm leading-none" aria-hidden="true" data-payload-fold-icon>
+                        ›
+                      </span>
+                    </button>
+                  ) : (
+                    <span aria-hidden="true" />
+                  )}
+                  <span class="select-none text-right" aria-hidden="true">
+                    {index + 1}
+                  </span>
                 </span>
-                <span class="whitespace-pre px-4" data-payload-line-content>
+                <span class="px-4" data-payload-line-content>
                   {tokenize(line).map((token) => (
                     <span class={token_classes[token.kind]}>{token.value}</span>
                   ))}
+                  {fold_ranges.has(index) && (
+                    <span class="text-[#71717a]" data-payload-fold-placeholder hidden>
+                      {` … ${fold_ranges.get(index)!.closing_token}`}
+                    </span>
+                  )}
                 </span>
               </span>
             ))}
           </code>
-        </pre>
+        </div>
       </div>
     ) : (
       <div class="grid min-h-44 place-items-center bg-[#111318] px-6 py-8 text-center">
@@ -171,11 +198,49 @@ const tone_classes =
 </article>
 
 <style>
+  /* Formatter indentation must not become visible space between code elements. */
+  [data-payload-code] {
+    font-size: 0;
+    line-height: 0;
+  }
+
+  [data-payload-line-number] {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  [data-payload-line-content] {
+    grid-column: 2;
+    grid-row: 1;
+    font-size: 0;
+    line-height: 0;
+  }
+
+  [data-payload-line-content] > span {
+    font-size: 0.6875rem;
+    line-height: 1.25rem;
+    white-space: pre;
+  }
+
+  [data-payload-fold-icon] {
+    transition: transform 120ms ease;
+  }
+
+  [data-payload-fold][aria-expanded="true"] [data-payload-fold-icon] {
+    transform: rotate(90deg);
+  }
+
+  @media (min-width: 40rem) {
+    [data-payload-line-content] > span {
+      font-size: 0.75rem;
+    }
+  }
+
   [data-payload-viewer][data-wrapped="true"] [data-payload-code] {
     min-width: 0;
   }
 
-  [data-payload-viewer][data-wrapped="true"] [data-payload-line-content] {
+  [data-payload-viewer][data-wrapped="true"] [data-payload-line-content] > span {
     white-space: pre-wrap;
     overflow-wrap: anywhere;
   }
@@ -194,6 +259,46 @@ const tone_classes =
       viewer.dataset.wrapped = String(wrapped);
       wrap_button.setAttribute("aria-pressed", String(wrapped));
       wrap_button.textContent = wrapped ? "Unwrap" : "Wrap";
+    });
+
+    const payload_lines = Array.from(viewer.querySelectorAll<HTMLElement>("[data-payload-line]"));
+    const fold_buttons = Array.from(viewer.querySelectorAll<HTMLButtonElement>("[data-payload-fold]"));
+    const collapsed_ranges = new Set<number>();
+    const ranges = fold_buttons.map((button) => ({
+      button,
+      start: Number(button.dataset.foldStart),
+      end: Number(button.dataset.foldEnd),
+    }));
+
+    const render_folds = () => {
+      payload_lines.forEach((line) => {
+        const line_index = Number(line.dataset.payloadLine);
+        line.hidden = ranges.some(
+          (range) => collapsed_ranges.has(range.start) && line_index > range.start && line_index <= range.end,
+        );
+      });
+
+      ranges.forEach(({ button, start, end }) => {
+        const expanded = !collapsed_ranges.has(start);
+        const line = payload_lines.find((candidate) => Number(candidate.dataset.payloadLine) === start);
+        const placeholder = line?.querySelector<HTMLElement>("[data-payload-fold-placeholder]");
+        button.setAttribute("aria-expanded", String(expanded));
+        button.setAttribute("aria-label", `${expanded ? "Collapse" : "Expand"} lines ${start + 1} through ${end + 1}`);
+        if (placeholder) {
+          placeholder.hidden = expanded;
+        }
+      });
+    };
+
+    ranges.forEach(({ button, start }) => {
+      button.addEventListener("click", () => {
+        if (collapsed_ranges.has(start)) {
+          collapsed_ranges.delete(start);
+        } else {
+          collapsed_ranges.add(start);
+        }
+        render_folds();
+      });
     });
 
     const copy_button = viewer.querySelector<HTMLButtonElement>("[data-payload-copy]");

@@ -164,6 +164,7 @@ export const scim_users = pgTable(
     user_name: text("user_name").notNull(),
     display_name: text("display_name"),
     active: boolean("active").notNull().default(true),
+    password_hash: text("password_hash"),
     data: jsonb("data").$type<Record<string, unknown>>().notNull().default({}),
     version: integer("version").notNull().default(1),
     ...timestamps,

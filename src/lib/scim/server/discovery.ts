@@ -79,7 +79,7 @@ export function get_service_provider_config(server: ScimServerRecord): ServicePr
     patch: { supported: true },
     bulk: { supported: true, maxOperations: 100, maxPayloadSize: 1_048_576 },
     filter: { supported: true, maxResults: 100 },
-    changePassword: { supported: false },
+    changePassword: { supported: true },
     sort: { supported: true },
     etag: { supported: true },
     authenticationSchemes: [

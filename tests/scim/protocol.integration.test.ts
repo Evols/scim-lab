@@ -1,8 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { eq } from "drizzle-orm";
-import { console_users, scim_servers } from "../../src/db/schema.ts";
+import { desc, eq } from "drizzle-orm";
+import { console_users, scim_events, scim_servers, scim_users } from "../../src/db/schema.ts";
 import { db } from "../../src/lib/database.ts";
-import { hash_secret } from "../../src/lib/crypto.ts";
+import { hash_secret, safe_scim_password_equal } from "../../src/lib/crypto.ts";
 import { handle_scim_request } from "../../src/lib/scim/api/router.ts";
 import {
   BULK_REQUEST_SCHEMA_URI,
@@ -119,6 +119,7 @@ describe("SCIM protocol through the HTTP router", { sequential: true }, () => {
         userName: "ada@example.com",
         displayName: "Ada Lovelace",
         active: null,
+        password: "initial-password",
         meta: { created: "1900-01-01T00:00:00Z" },
         [ENTERPRISE_USER_SCHEMA_URI]: { employeeNumber: "100" },
       }),
@@ -139,6 +140,64 @@ describe("SCIM protocol through the HTTP router", { sequential: true }, () => {
     });
     expect(resource.id).not.toBe("client-id-must-be-ignored");
     expect(resource.meta.created).not.toBe("1900-01-01T00:00:00Z");
+    expect(resource).not.toHaveProperty("password");
+    const [stored] = await db.select().from(scim_users).where(eq(scim_users.id, user_id)).limit(1);
+    expect(stored?.password_hash).not.toContain("initial-password");
+    expect(safe_scim_password_equal(stored?.password_hash ?? null, "initial-password")).toBe(true);
+    const [event] = await db
+      .select()
+      .from(scim_events)
+      .where(eq(scim_events.server_id, server_id))
+      .orderBy(desc(scim_events.id))
+      .limit(1);
+    expect(JSON.parse(event!.request_body!).password).toBe("[REDACTED]");
+  });
+
+  it("retains, replaces, and removes write-only passwords without returning them", async () => {
+    const created = await request("/Users", {
+      method: "POST",
+      body: JSON.stringify({ schemas: [USER_SCHEMA_URI], userName: "password@example.com", password: "first" }),
+    });
+    const resource = await created.json();
+    expect(created.status).toBe(201);
+    expect(resource).not.toHaveProperty("password");
+    let [stored] = await db.select().from(scim_users).where(eq(scim_users.id, resource.id)).limit(1);
+    const original_hash = stored!.password_hash;
+
+    const replaced = await request(`/Users/${resource.id}`, {
+      method: "PUT",
+      headers: { "if-match": created.headers.get("etag")! },
+      body: JSON.stringify({ schemas: [USER_SCHEMA_URI], userName: "password@example.com", displayName: "XYZ" }),
+    });
+    expect(replaced.status).toBe(200);
+    [stored] = await db.select().from(scim_users).where(eq(scim_users.id, resource.id)).limit(1);
+    expect(stored!.password_hash).toBe(original_hash);
+
+    const patched = await request(`/Users/${resource.id}?attributes=password,userName`, {
+      method: "PATCH",
+      headers: { "if-match": replaced.headers.get("etag")! },
+      body: JSON.stringify({
+        schemas: [PATCH_REQUEST_SCHEMA_URI],
+        Operations: [{ op: "replace", path: "password", value: "second" }],
+      }),
+    });
+    expect(patched.status).toBe(200);
+    expect(await patched.clone().json()).not.toHaveProperty("password");
+    [stored] = await db.select().from(scim_users).where(eq(scim_users.id, resource.id)).limit(1);
+    expect(stored!.password_hash).not.toBe(original_hash);
+    expect(safe_scim_password_equal(stored!.password_hash, "second")).toBe(true);
+
+    const removed = await request(`/Users/${resource.id}`, {
+      method: "PATCH",
+      headers: { "if-match": patched.headers.get("etag")! },
+      body: JSON.stringify({
+        schemas: [PATCH_REQUEST_SCHEMA_URI],
+        Operations: [{ op: "remove", path: "password" }],
+      }),
+    });
+    expect(removed.status).toBe(200);
+    [stored] = await db.select().from(scim_users).where(eq(scim_users.id, resource.id)).limit(1);
+    expect(stored!.password_hash).toBeNull();
   });
 
   it("filters, sorts, paginates, and projects list responses", async () => {

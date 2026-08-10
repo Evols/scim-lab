@@ -9,6 +9,7 @@ describe("SCIM persistence normalization", () => {
       schemas: [USER_SCHEMA_URI, ENTERPRISE_USER_SCHEMA_URI],
       id: "ignored",
       userName: "ada",
+      password: "must-not-enter-resource-data",
       name: { givenName: "Ada", middleName: null },
       emails: [
         { value: "first@test", primary: true },
