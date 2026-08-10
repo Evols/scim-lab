@@ -41,6 +41,14 @@ function matching_key(record: DynamicObject, requested: string): string | undefi
   return Object.keys(record).find((candidate) => candidate.toLowerCase() === requested.toLowerCase());
 }
 
+function is_read_only_top_level_attribute(requested: string): boolean {
+  let attribute = requested.toLowerCase();
+  for (const core of [USER_SCHEMA_URI, GROUP_SCHEMA_URI]) {
+    if (attribute.startsWith(`${core.toLowerCase()}:`)) attribute = attribute.slice(core.length + 1);
+  }
+  return ["id", "meta", "schemas", "groups"].includes(attribute);
+}
+
 function resolve_container(
   resource: DynamicObject,
   requested: string,
@@ -186,8 +194,13 @@ export function merge_patch_value<T extends object>(
     if (!value || typeof value !== "object" || Array.isArray(value)) {
       throw new ScimServiceError("patch_value_invalid", "A pathless PATCH value must be an object.");
     }
-    for (const key of Object.keys(value as DynamicObject)) ensure_path(resource, key);
-    const enterprise = (value as DynamicObject)[ENTERPRISE_USER_SCHEMA_URI];
+    // SCIM clients commonly echo readOnly attributes in a pathless operation.
+    // RFC 7643 requires service providers to ignore those supplied values.
+    const writable_value = Object.fromEntries(
+      Object.entries(value as DynamicObject).filter(([key]) => !is_read_only_top_level_attribute(key)),
+    ) as DynamicObject;
+    for (const key of Object.keys(writable_value)) ensure_path(resource, key);
+    const enterprise = writable_value[ENTERPRISE_USER_SCHEMA_URI];
     if (
       enterprise &&
       typeof enterprise === "object" &&
@@ -198,9 +211,9 @@ export function merge_patch_value<T extends object>(
     ) {
       throw new ScimServiceError("patch_mutability", "manager.displayName is readOnly.");
     }
-    if (operation === "add") merge_object(resource, value as DynamicObject);
+    if (operation === "add") merge_object(resource, writable_value);
     else {
-      for (const [requested_key, item] of Object.entries(value as DynamicObject)) {
+      for (const [requested_key, item] of Object.entries(writable_value)) {
         const key = matching_key(resource, requested_key) ?? requested_key;
         const current = resource[key];
         if (

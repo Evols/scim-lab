@@ -1,4 +1,5 @@
 import { and, asc, eq, inArray } from "drizzle-orm";
+import { isDeepStrictEqual } from "node:util";
 import { db } from "../../database";
 import type { Database } from "../../database";
 import { scim_group_members, scim_groups, scim_users } from "../../../db/schema.ts";
@@ -16,6 +17,19 @@ import {
 } from "../schemas.ts";
 import { ScimServiceError } from "./error.ts";
 import { clean_group_payload, group_resource } from "./resources.ts";
+
+type NormalizedGroupMember = { id: string; type: "Group" | "User" };
+
+function normalize_group_members(members: GroupMember[]): NormalizedGroupMember[] {
+  return [
+    ...new Map(
+      members.map((member) => {
+        const type = member.type?.toLowerCase() === "group" ? "Group" : "User";
+        return [`${type}:${member.value}`, { id: member.value, type }] as const;
+      }),
+    ).values(),
+  ].sort((left, right) => `${left.type}:${left.id}`.localeCompare(`${right.type}:${right.id}`));
+}
 
 async function find_group(server_id: string, group_id: string) {
   const rows = await db
@@ -35,17 +49,7 @@ async function replace_group_members(
   members: GroupMember[],
   database: Database,
 ): Promise<void> {
-  const normalized = [
-    ...new Map(
-      members.map((member) => [
-        `${member.type?.toLowerCase() === "group" ? "Group" : "User"}:${member.value}`,
-        {
-          id: member.value,
-          type: member.type?.toLowerCase() === "group" ? "Group" : "User",
-        },
-      ]),
-    ).values(),
-  ];
+  const normalized = normalize_group_members(members);
   const user_ids = normalized.filter((member) => member.type === "User").map((member) => member.id);
   const group_ids = normalized.filter((member) => member.type === "Group").map((member) => member.id);
 
@@ -193,7 +197,8 @@ export async function patch_group(
   origin: string,
 ): Promise<GroupResource> {
   const existing = await find_group(server_id, group_id);
-  const patched = apply_patch(await group_resource(existing, origin), operations);
+  const current = await group_resource(existing, origin);
+  const patched = apply_patch(current, operations);
   const validation = GroupResourceSchema.safeParse(patched);
   if (!validation.success) {
     throw new ScimServiceError("patch_value_invalid", "PATCH produced an invalid Group attribute value.");
@@ -202,8 +207,20 @@ export async function patch_group(
   const display_name = String(resource.displayName ?? "");
   const external_id = resource.externalId ? String(resource.externalId) : null;
   const members = parse_group_members(resource.members ?? []);
+  const data = clean_group_payload(resource);
   if (!display_name.trim()) {
     throw new ScimServiceError("group_patch_removes_display_name", "PATCH cannot remove displayName.");
+  }
+  if (
+    display_name === existing.display_name &&
+    external_id === existing.external_id &&
+    isDeepStrictEqual(data, existing.data) &&
+    isDeepStrictEqual(
+      normalize_group_members(members),
+      normalize_group_members(parse_group_members(current.members ?? [])),
+    )
+  ) {
+    return current;
   }
   const updated = await db.transaction(async (transaction) => {
     await replace_group_members(server_id, existing.id, members, transaction);
@@ -212,7 +229,7 @@ export async function patch_group(
       .set({
         display_name,
         external_id,
-        data: clean_group_payload(resource),
+        data,
         version: existing.version + 1,
         updated_at: new Date(),
       })
