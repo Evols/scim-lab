@@ -15,6 +15,8 @@ export type PaginationParams = {
 
 export type ListQuery = PaginationParams & {
   filter?: string | null;
+  sort_by?: string | null;
+  sort_order?: string | null;
 };
 
 function pagination_params(source: URL | PaginationParams): PaginationParams {
@@ -28,8 +30,8 @@ function pagination_params(source: URL | PaginationParams): PaginationParams {
 
 export function paginate<T>(resources: T[], source: URL | PaginationParams): ListResponse<T> {
   const params = pagination_params(source);
-  const parsed_start = Number.parseInt(params.start_index ?? "1", 10);
-  const parsed_count = Number.parseInt(params.count ?? "100", 10);
+  const parsed_start = /^-?\d+$/.test(params.start_index ?? "1") ? Number(params.start_index ?? "1") : 1;
+  const parsed_count = /^-?\d+$/.test(params.count ?? "100") ? Number(params.count ?? "100") : 100;
   const start_index = Number.isFinite(parsed_start) ? Math.max(1, parsed_start) : 1;
   const requested_count = Number.isFinite(parsed_count) ? Math.max(0, parsed_count) : 100;
   // The service advertises maxResults=100, so every list endpoint enforces it.

@@ -184,6 +184,7 @@ export const scim_groups = pgTable(
       .references(() => scim_servers.id, { onDelete: "cascade" }),
     external_id: text("external_id"),
     display_name: text("display_name").notNull(),
+    data: jsonb("data").$type<Record<string, unknown>>().notNull().default({}),
     version: integer("version").notNull().default(1),
     ...timestamps,
   },
@@ -199,14 +200,13 @@ export const scim_group_members = pgTable(
     group_id: uuid("group_id")
       .notNull()
       .references(() => scim_groups.id, { onDelete: "cascade" }),
-    user_id: uuid("user_id")
-      .notNull()
-      .references(() => scim_users.id, { onDelete: "cascade" }),
+    member_id: uuid("member_id").notNull(),
+    member_type: text("member_type").notNull().default("User"),
     created_at: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    primaryKey({ columns: [table.group_id, table.user_id] }),
-    index("idx_scim_group_members_user_id").on(table.user_id),
+    primaryKey({ columns: [table.group_id, table.member_type, table.member_id] }),
+    index("idx_scim_group_members_member").on(table.member_type, table.member_id),
   ],
 );
 
