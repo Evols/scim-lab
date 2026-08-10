@@ -26,7 +26,7 @@ const status_classes = (status: number) =>
     </div>
     <form class="flex gap-2" method="GET">
       <input type="hidden" name="server" value={server_id} /><input type="hidden" name="view" value="logs" /><select
-        class="h-9 rounded-md border border-[#d4d4d8] bg-white px-3 text-sm shadow-xs outline-none focus:ring-2 focus:ring-[#e4e4e7]"
+        class="h-10 min-w-0 flex-1 rounded-md border border-[#d4d4d8] bg-white px-2 text-sm shadow-xs outline-none focus:ring-2 focus:ring-[#e4e4e7] sm:h-9 sm:flex-none sm:px-3"
         name="method"
         onchange="this.form?.submit()"
         ><option value="">All methods</option>{
@@ -37,7 +37,7 @@ const status_classes = (status: number) =>
           ))
         }</select
       ><select
-        class="h-9 rounded-md border border-[#d4d4d8] bg-white px-3 text-sm shadow-xs outline-none focus:ring-2 focus:ring-[#e4e4e7]"
+        class="h-10 min-w-0 flex-1 rounded-md border border-[#d4d4d8] bg-white px-2 text-sm shadow-xs outline-none focus:ring-2 focus:ring-[#e4e4e7] sm:h-9 sm:flex-none sm:px-3"
         name="status"
         onchange="this.form?.submit()"
         ><option value="">All statuses</option><option value="success" selected={status_filter === "success"}
@@ -53,7 +53,7 @@ const status_classes = (status: number) =>
         <div class="divide-y divide-[#e4e4e7]">
           {events.map((event) => (
             <details class="group">
-              <summary class="grid cursor-pointer list-none grid-cols-[18px_54px_1fr_auto] items-center gap-3 px-4 py-3 transition hover:bg-[#fafafa] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#a1a1aa] md:grid-cols-[18px_64px_1fr_60px_110px_70px]">
+              <summary class="grid min-h-12 cursor-pointer list-none grid-cols-[14px_46px_1fr_auto] items-center gap-2 px-3 py-3 transition hover:bg-[#fafafa] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#a1a1aa] sm:grid-cols-[18px_54px_1fr_auto] sm:gap-3 sm:px-4 md:grid-cols-[18px_64px_1fr_60px_110px_70px]">
                 <span
                   class="text-lg leading-none text-[#a1a1aa] transition-transform group-open:rotate-90"
                   aria-hidden="true"

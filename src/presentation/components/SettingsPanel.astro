@@ -29,7 +29,11 @@ const return_to = `/?server=${server.id}&view=settings`;
           The name shown in your server picker.
         </p>
       </div>
-      <form class="rounded-lg border border-[#e4e4e7] bg-white p-5 shadow-xs" action="/api/console" method="POST">
+      <form
+        class="rounded-lg border border-[#e4e4e7] bg-white p-4 shadow-xs sm:p-5"
+        action="/api/console"
+        method="POST"
+      >
         <input type="hidden" name="intent" value="rename_server" /><input
           type="hidden"
           name="server_id"
@@ -58,7 +62,7 @@ const return_to = `/?server=${server.id}&view=settings`;
           One credential mode is active at a time.
         </p>
       </div>
-      <div class="rounded-lg border border-[#e4e4e7] bg-white p-5 shadow-xs">
+      <div class="rounded-lg border border-[#e4e4e7] bg-white p-4 shadow-xs sm:p-5">
         <div class="flex items-center justify-between">
           <div>
             <p class="text-sm font-medium">Current mode</p><p class="mt-1 text-sm text-[#71717a]">
@@ -102,8 +106,8 @@ const return_to = `/?server=${server.id}&view=settings`;
           Reusable co-owner links expire after 30 days.
         </p>
       </div>
-      <div class="rounded-lg border border-[#e4e4e7] bg-white p-5 shadow-xs">
-        <div class="flex items-center justify-between gap-4">
+      <div class="rounded-lg border border-[#e4e4e7] bg-white p-4 shadow-xs sm:p-5">
+        <div class="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
           <div>
             <p class="text-sm font-medium">Magic links</p><p class="mt-1 text-sm text-[#71717a]">
               Anyone signed in with a valid link becomes a co-owner.
@@ -116,7 +120,7 @@ const return_to = `/?server=${server.id}&view=settings`;
                   <input type="hidden" name="server_id" value={server.id} />
                   <input type="hidden" name="return_to" value={return_to} />
                   <button
-                    class="h-9 cursor-pointer rounded-md border border-[#e4e4e7] bg-white px-3 text-sm font-medium shadow-xs hover:bg-[#f4f4f5]"
+                    class="h-10 w-full cursor-pointer rounded-md border border-[#e4e4e7] bg-white px-3 text-sm font-medium shadow-xs hover:bg-[#f4f4f5] sm:h-9 sm:w-auto"
                     type="submit"
                   >
                     Create link
@@ -168,7 +172,7 @@ const return_to = `/?server=${server.id}&view=settings`;
           This action cannot be undone.
         </p>
       </div>
-      <div class="rounded-lg border border-[#fecaca] bg-white p-5 shadow-xs">
+      <div class="rounded-lg border border-[#fecaca] bg-white p-4 shadow-xs sm:p-5">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p class="text-sm font-medium">Delete this server</p><p class="mt-1 text-sm text-[#71717a]">
@@ -184,7 +188,7 @@ const return_to = `/?server=${server.id}&view=settings`;
               name="server_id"
               value={server.id}
             /><button
-              class="h-9 cursor-pointer rounded-md bg-[#dc2626] px-3 text-sm font-medium text-white shadow-sm hover:bg-[#b91c1c]"
+              class="h-10 w-full cursor-pointer rounded-md bg-[#dc2626] px-3 text-sm font-medium text-white shadow-sm hover:bg-[#b91c1c] sm:h-9 sm:w-auto"
               type="submit">Delete server</button
             >
           </form>

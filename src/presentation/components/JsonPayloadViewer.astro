@@ -4,7 +4,7 @@ import { find_json_fold_ranges } from "../json-folding.ts";
 interface Props {
   label: string;
   body: string | null;
-  tone: "request" | "response";
+  tone: "request" | "response" | "neutral";
   truncated?: boolean;
 }
 
@@ -72,10 +72,12 @@ const token_classes: Record<TokenKind, string> = {
   number: "text-[#fcd34d]",
   literal: "text-[#c4b5fd]",
 };
-const tone_classes =
-  tone === "request"
-    ? { mark: "bg-[#eff6ff] text-[#2563eb] ring-[#dbeafe]", dot: "bg-[#3b82f6]" }
-    : { mark: "bg-[#f0fdf4] text-[#16a34a] ring-[#dcfce7]", dot: "bg-[#22c55e]" };
+const tone_classes = {
+  request: { mark: "bg-[#eff6ff] text-[#2563eb] ring-[#dbeafe]", dot: "bg-[#3b82f6]" },
+  response: { mark: "bg-[#f0fdf4] text-[#16a34a] ring-[#dcfce7]", dot: "bg-[#22c55e]" },
+  neutral: { mark: "bg-[#f4f4f5] text-[#52525b] ring-[#e4e4e7]", dot: "bg-[#a1a1aa]" },
+}[tone];
+const tone_mark = { request: "REQ", response: "RES", neutral: "JSON" }[tone];
 ---
 
 <article class="overflow-hidden rounded-lg border border-[#d4d4d8] bg-white shadow-xs" data-payload-viewer>
@@ -84,11 +86,11 @@ const tone_classes =
   >
     <div
       class:list={[
-        "grid size-7 shrink-0 place-items-center rounded-md text-[10px] font-bold tracking-wide ring-1 ring-inset",
+        "grid size-7 shrink-0 place-items-center rounded-md text-[9px] font-bold tracking-wide ring-1 ring-inset",
         tone_classes.mark,
       ]}
     >
-      {tone === "request" ? "REQ" : "RES"}
+      {tone_mark}
     </div>
     <div class="min-w-0 flex-1">
       <div class="flex flex-wrap items-center gap-2">
@@ -142,7 +144,7 @@ const tone_classes =
             {lines.map((line, index) => (
               <span class="grid min-h-5 grid-cols-[3rem_minmax(0,1fr)]" data-payload-line={index}>
                 <span
-                  class="sticky left-0 z-10 grid grid-cols-[1rem_1fr] items-center border-r border-white/5 bg-[#111318] pr-2 text-[11px] leading-5 text-[#52525b] sm:text-xs"
+                  class="sticky left-0 z-10 grid select-none grid-cols-[1rem_1fr] items-center border-r border-white/5 bg-[#111318] pr-2 text-[11px] leading-5 text-[#52525b] sm:text-xs"
                   data-payload-line-number
                 >
                   {fold_ranges.has(index) ? (
@@ -187,14 +189,20 @@ const tone_classes =
           <span class="mx-auto grid size-8 place-items-center rounded-full border border-white/10 bg-white/5 font-mono text-xs text-[#71717a]">
             ∅
           </span>
-          <p class="mt-3 text-xs font-medium text-[#a1a1aa]">No {tone} body</p>
-          <p class="mt-1 text-[11px] text-[#52525b]">This exchange did not include a payload.</p>
+          <p class="mt-3 text-xs font-medium text-[#a1a1aa]">
+            {tone === "neutral" ? "No attributes" : `No ${tone} body`}
+          </p>
+          <p class="mt-1 text-[11px] text-[#52525b]">
+            {tone === "neutral"
+              ? "This resource does not include any attributes."
+              : "This exchange did not include a payload."}
+          </p>
         </div>
       </div>
     )
   }
 
-  <textarea class="sr-only" tabindex="-1" aria-hidden="true" data-payload-source>{formatted_body}</textarea>
+  <span hidden data-payload-source set:text={formatted_body} />
 </article>
 
 <style>
@@ -302,12 +310,12 @@ const tone_classes =
     });
 
     const copy_button = viewer.querySelector<HTMLButtonElement>("[data-payload-copy]");
-    const source = viewer.querySelector<HTMLTextAreaElement>("[data-payload-source]");
+    const source = viewer.querySelector<HTMLElement>("[data-payload-source]");
     copy_button?.addEventListener("click", async () => {
       if (!source) {
         return;
       }
-      await navigator.clipboard.writeText(source.value);
+      await navigator.clipboard.writeText(source.textContent ?? "");
       copy_button.textContent = "Copied";
       window.setTimeout(() => {
         copy_button.textContent = "Copy";

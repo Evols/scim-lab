@@ -384,6 +384,105 @@ describe("SCIM protocol through the HTTP router", { sequential: true }, () => {
     ).toBe(204);
   });
 
+  it("supports Okta Group Push PATCH payloads end to end", async () => {
+    const create_user = async (userName: string) => {
+      const response = await request("/Users", {
+        method: "POST",
+        body: JSON.stringify({ schemas: [USER_SCHEMA_URI], userName }),
+      });
+      expect(response.status).toBe(201);
+      return response.json() as Promise<{ id: string }>;
+    };
+    const first = await create_user("group-push-first@example.com");
+    const second = await create_user("group-push-second@example.com");
+    const third = await create_user("group-push-third@example.com");
+
+    const created = await request("/Groups", {
+      method: "POST",
+      body: JSON.stringify({
+        schemas: [GROUP_SCHEMA_URI],
+        displayName: "Original pushed group",
+        members: [{ value: first.id }],
+      }),
+    });
+    expect(created.status).toBe(201);
+    const group = (await created.json()) as { id: string };
+    let etag = created.headers.get("etag")!;
+
+    const patch_group = async (Operations: Array<Record<string, unknown>>) => {
+      const response = await request(`/Groups/${group.id}`, {
+        method: "PATCH",
+        headers: { "if-match": etag },
+        body: JSON.stringify({ schemas: [PATCH_REQUEST_SCHEMA_URI], Operations }),
+      });
+      expect(response.status).toBe(200);
+      etag = response.headers.get("etag")!;
+      return response;
+    };
+
+    const renamed = await patch_group([
+      { op: "replace", value: { id: group.id, displayName: "Renamed pushed group" } },
+    ]);
+    expect(await renamed.json()).toMatchObject({ id: group.id, displayName: "Renamed pushed group" });
+
+    const added = await patch_group([
+      {
+        op: "add",
+        path: "members",
+        value: [{ value: second.id, display: "group-push-second@example.com" }],
+      },
+    ]);
+    expect((await added.json()).members).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ value: first.id, type: "User" }),
+        expect.objectContaining({ value: second.id, type: "User" }),
+      ]),
+    );
+
+    const before_duplicate_etag = etag;
+    const duplicate = await patch_group([
+      {
+        op: "add",
+        path: "members",
+        value: [{ value: second.id, display: "group-push-second@example.com" }],
+      },
+    ]);
+    expect(duplicate.headers.get("etag")).toBe(before_duplicate_etag);
+    expect((await duplicate.json()).members).toHaveLength(2);
+
+    const changed = await patch_group([
+      { op: "remove", path: `members[value eq "${first.id}"]` },
+      {
+        op: "add",
+        path: "members",
+        value: [{ value: third.id, display: "group-push-third@example.com" }],
+      },
+    ]);
+    expect((await changed.json()).members.map((member: { value: string }) => member.value)).toEqual(
+      expect.arrayContaining([second.id, third.id]),
+    );
+
+    const replaced = await patch_group([
+      {
+        op: "replace",
+        path: "members",
+        value: [{ value: first.id, display: "group-push-first@example.com" }],
+      },
+    ]);
+    expect((await replaced.json()).members).toEqual([expect.objectContaining({ value: first.id, type: "User" })]);
+
+    const before_noop_etag = etag;
+    const noop = await patch_group([
+      { op: "remove", path: 'members[value eq "00000000-0000-0000-0000-000000000000"]' },
+    ]);
+    expect(noop.headers.get("etag")).toBe(before_noop_etag);
+    expect((await noop.json()).members).toEqual([expect.objectContaining({ value: first.id })]);
+
+    const removed_all = await patch_group([{ op: "remove", path: "members" }]);
+    expect(await removed_all.json()).not.toHaveProperty("members");
+    expect((await (await request(`/Users/${first.id}`)).json()).groups).toBeUndefined();
+  });
+
   it("executes Bulk operations and resolves bulkId references", async () => {
     const response = await request("/Bulk", {
       method: "POST",

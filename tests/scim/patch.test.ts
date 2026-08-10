@@ -29,6 +29,24 @@ describe("RFC 7644 section 3.5.2 PATCH", () => {
     expect(resource).toEqual({ userName: "ada", title: "Engineer", emails: [{ value: "old@test" }] });
   });
 
+  it("ignores readOnly attributes echoed in a pathless operation", () => {
+    const resource = {
+      schemas: ["urn:ietf:params:scim:schemas:core:2.0:Group"],
+      id: "group-id",
+      displayName: "Old name",
+      meta: { resourceType: "Group", version: 'W/"1"' },
+    };
+    const result = apply_patch(resource, [
+      patch("replace", undefined, {
+        schemas: ["client-supplied-schema"],
+        id: "client-supplied-id",
+        displayName: "New name",
+        meta: { resourceType: "User", version: 'W/"999"' },
+      }),
+    ]);
+    expect(result).toEqual({ ...resource, displayName: "New name" });
+  });
+
   it("removes all or filtered multi-values", () => {
     const resource = {
       emails: [
@@ -84,6 +102,7 @@ describe("RFC 7644 section 3.5.2 PATCH", () => {
     [patch("remove"), "patch_no_target"],
     [patch("replace", 'emails[type eq "missing"].value', "x"), "patch_no_target"],
     [patch("replace", "meta.created", "x"), "patch_mutability"],
+    [patch("replace", "id", "x"), "patch_mutability"],
     [patch("remove", "groups"), "patch_mutability"],
     [patch("replace", 'members[value eq "x"].display', "X"), "patch_mutability"],
     [patch("archive", "active", false), "patch_operation_unsupported"],

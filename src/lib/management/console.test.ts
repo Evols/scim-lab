@@ -17,7 +17,7 @@ describe("console data", () => {
           { server_id: created.server.id, user_name: "ada@example.com" },
         ])
         .returning();
-      const [engineering] = await transaction
+      const [engineering, design] = await transaction
         .insert(scim_groups)
         .values([
           { server_id: created.server.id, display_name: "Engineering" },
@@ -27,6 +27,7 @@ describe("console data", () => {
       await transaction.insert(scim_group_members).values([
         { group_id: engineering!.id, member_id: zoe!.id, member_type: "User" },
         { group_id: engineering!.id, member_id: ada!.id, member_type: "User" },
+        { group_id: design!.id, member_id: engineering!.id, member_type: "Group" },
       ]);
       await transaction.insert(scim_events).values({
         server_id: created.server.id,
@@ -47,8 +48,22 @@ describe("console data", () => {
           group.member_count,
         ]),
       ).toEqual([
-        ["Design", 0],
+        ["Design", 1],
         ["Engineering", 2],
+      ]);
+      const groups = await list_console_groups(created.server.id, transaction);
+      expect(groups.find((group) => group.display_name === "Design")?.members).toEqual([
+        {
+          id: engineering!.id,
+          type: "Group",
+          display_name: "Engineering",
+          user_name: null,
+          external_id: null,
+        },
+      ]);
+      expect(groups.find((group) => group.display_name === "Engineering")?.members).toMatchObject([
+        { id: ada!.id, type: "User", display_name: "ada@example.com", user_name: "ada@example.com" },
+        { id: zoe!.id, type: "User", display_name: "zoe@example.com", user_name: "zoe@example.com" },
       ]);
     }),
   );

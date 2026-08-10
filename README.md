@@ -1,95 +1,222 @@
 # SCIM Lab
 
-SCIM Lab is a self-hosted SCIM v2 sandbox. The first visit creates a working anonymous server, a bearer token, and a Postgres-backed store for Users, Groups, and verbose request logs.
+[![SCIM 2.0](https://img.shields.io/badge/SCIM-2.0-2563eb)](https://www.rfc-editor.org/rfc/rfc7644)
+[![Node.js 22](https://img.shields.io/badge/Node.js-22-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-## Requirements
+> Try it at [scimlab.dev](https://scimlab.dev).
+
+SCIM Lab is a [SCIM 2.0](https://www.rfc-editor.org/rfc/rfc7644) sandbox for developing and debugging identity-provisioning integrations. Open the console, copy the generated endpoint and credentials, then point a SCIM client at a real PostgreSQL-backed server while inspecting sanitized requests and responses in the browser.
+
+The first visit works anonymously and creates a disposable SCIM server automatically. OpenID Connect can be added for persistent accounts, multiple servers, credential rotation, and sharing.
+
+## Why SCIM Lab?
+
+- It's free
+- It works
+- Exercise Users and Groups against an actual SCIM HTTP endpoint.
+- Inspect request methods, paths, authentication results, status codes, timing, and formatted JSON payloads.
+- Reproduce client behavior from Okta, Microsoft Entra ID, Google Workspace, or a custom provisioner.
+- Test filters, PATCH paths, memberships, discovery, ETags, bulk operations, and failure responses.
+- Run locally or deploy the included multi-container stack on Coolify.
+
+## SCIM support
+
+SCIM Lab implements the following RFC 7643 and RFC 7644 surface:
+
+- Users and Groups: `GET`, `POST`, `PUT`, `PATCH`, and `DELETE`.
+- Service-provider root queries and `POST /.search`.
+- SCIM filter expressions, sorting, one-based pagination, and attribute projection.
+- PATCH `add`, `replace`, and `remove`, including value-path filters and primary-value normalization.
+- Bulk operations, `bulkId` references, `failOnErrors`, and advertised limits.
+- Weak ETags and conditional retrieval, replacement, patching, and deletion.
+- Direct and nested Group membership with direct/indirect membership on User resources.
+- The enterprise User extension and opaque vendor extension round trips.
+- `ServiceProviderConfig`, `Schemas`, and `ResourceTypes` discovery endpoints.
+- Bearer-token and HTTP Basic client authentication.
+- Write-only User passwords on create, replace, and patch. Passwords are salted and hashed, never returned, and redacted from request logs.
+- SCIM error documents using `application/scim+json`.
+
+The sandbox currently limits each server to 100 Users. It retains the newest 1,000 request events for up to 30 days. Provisioned Users cannot sign in to the SCIM Lab console, and the optional `/Me` alias is not implemented.
+
+## Quick start
+
+### Requirements
 
 - Node.js 22.12 or newer
-- pnpm 10
-- PostgreSQL 13 or newer
-- An OpenID Connect provider for durable accounts and sharing (anonymous use works without it)
+- Corepack and the pnpm version pinned in `package.json`
+- PostgreSQL 16 or newer
 
-## Local setup
-
-Create the database using your local Postgres instance:
+Create a local database:
 
 ```sh
 createdb -U postgres scim_lab
 ```
 
-Local development defaults to a PostgreSQL database named `scim_lab` with `postgres` as both the username and password. Anonymous use needs no environment file. To override the defaults or enable OIDC login and sharing, optionally create an ignored `.env` file:
-
-```dotenv
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/scim_lab
-APP_ORIGIN=http://localhost:4321
-APP_SECRET=replace-with-at-least-32-random-bytes
-OIDC_ISSUER_URL=http://localhost:8080/realms/scim-lab
-OIDC_CLIENT_ID=scim-lab
-OIDC_CLIENT_SECRET=replace-with-your-oidc-client-secret
-OIDC_SCOPES=openid
-```
-
-If OIDC is configured, register `${APP_ORIGIN}/auth/callback` as its redirect URI. Then install, migrate, and start:
+Install dependencies, apply migrations, and start Astro in background mode:
 
 ```sh
+corepack enable
 pnpm install
 pnpm db:migrate
 pnpm astro dev --background
 ```
 
-Use `pnpm astro dev status`, `pnpm astro dev logs`, and `pnpm astro dev stop` to manage the background server.
+Open <http://localhost:4321>. Manage the background server with:
 
-## Production on Coolify
+```sh
+pnpm astro dev status
+pnpm astro dev logs
+pnpm astro dev stop
+```
 
-Create a Docker Compose resource in Coolify from this repository. The stack runs the Astro Node server, Logto OSS, and separate PostgreSQL databases for each application. One-shot setup services initialize and migrate both databases before their applications start.
+Development defaults to `postgresql://postgres:postgres@localhost:5432/scim_lab` and an intentionally insecure local application secret. Override the defaults in an ignored `.env` file when needed:
 
-Use Caddy as the proxy on the Coolify server. Assign these domains in the resource configuration:
+```dotenv
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/scim_lab
+APP_ORIGIN=http://localhost:4321
+APP_SECRET=replace-with-a-stable-random-secret
 
-- `application`: `https://scimlab.dev:4321`
-- `logto`: `https://auth.scimlab.dev:3001,https://auth-admin.scimlab.dev:3002`
+# Optional: all three values enable OpenID Connect.
+OIDC_ISSUER_URL=https://identity.example.com/oidc
+OIDC_CLIENT_ID=scim-lab
+OIDC_CLIENT_SECRET=replace-with-your-client-secret
+OIDC_SCOPES=openid profile email
+```
 
-The port suffixes tell Coolify which internal container port to proxy; public traffic still uses standard HTTPS port 443. Point all three hostnames at the Coolify server.
+Register `${APP_ORIGIN}/auth/callback` as an allowed OIDC redirect URI. `OIDC_SCOPES` must include `openid`.
 
-Coolify discovers the variables referenced by `compose.yaml` and generates the database passwords, application secret, and Logto vault key; no production `.env` file is needed. `APP_ORIGIN`, `LOGTO_ENDPOINT`, `LOGTO_ADMIN_ENDPOINT`, and `OIDC_ISSUER_URL` have production defaults for the domains above.
+## Try the SCIM endpoint
 
-### Configure Logto
+The console displays a base URL similar to:
 
-After the first deployment:
+```text
+http://localhost:4321/scim/<server-id>/v2
+```
 
-1. Open `https://auth-admin.scimlab.dev` and create the initial Logto administrator.
-2. Under **Applications**, create a **Third-party app**, choose **OIDC / OAuth** and **Traditional Web**, and name it `SCIM Lab`.
-3. Add `https://scimlab.dev/auth/callback` as an allowed redirect URI.
-4. Add `https://scimlab.dev` as an allowed post sign-out redirect URI.
-5. Copy the Logto App Secret into Coolify as `OIDC_CLIENT_SECRET`, then redeploy the stack. The issuer and App ID default to `https://auth.scimlab.dev/oidc` and `z3kp8emdt0f9pvugrds1i` respectively.
+Copy the generated bearer token, then query discovery or create a User:
 
-The configured Logto third-party application currently grants the core `openid` scope. To display names or email addresses in SCIM Lab, grant the `profile` and/or `email` permissions in the application's **Permissions** tab, then add those scopes to `OIDC_SCOPES` (for example, `openid profile email`). Requesting scopes before they are granted makes Logto reject the authorization request.
+```sh
+export SCIM_BASE='http://localhost:4321/scim/<server-id>/v2'
+export SCIM_TOKEN='<bearer-token>'
 
-The existing **Sign in** button sends users through this OIDC application. Signing out clears both the local SCIM Lab session and the centralized Logto session.
+curl --fail-with-body \
+  --header "Authorization: Bearer ${SCIM_TOKEN}" \
+  --header 'Accept: application/scim+json' \
+  "${SCIM_BASE}/ServiceProviderConfig"
 
-For username/password registration without an email provider, go to **Sign-in & account → Sign-up and sign-in**, choose **Username** as the sign-up identifier, and enable password creation. Enable passkey sign-in and its **Continue with passkey** option in the same sign-in experience; Logto can then prompt users to bind a passkey after registration.
+curl --fail-with-body \
+  --request POST \
+  --header "Authorization: Bearer ${SCIM_TOKEN}" \
+  --header 'Content-Type: application/scim+json' \
+  --data '{
+    "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+    "userName": "ada@example.com",
+    "displayName": "Ada Lovelace",
+    "active": true
+  }' \
+  "${SCIM_BASE}/Users"
+```
 
-For email/password registration, first add and configure an SMTP or other email connector, then choose **Email address** plus password creation. Logto requires email verification when email is the sign-up identifier. The stack installs only the Google connector by default.
+Do not commit real endpoint credentials. Regenerate them from the server settings if they are exposed.
 
-For Google login:
+## Configuration
 
-1. Under **Connectors → Social connectors**, add Google.
-2. In Google Cloud, create a Web application OAuth client. Use `https://auth.scimlab.dev` as an authorized JavaScript origin and copy the exact callback URI shown by the Logto connector into Google's authorized redirect URIs.
-3. Save the Google client ID and secret in Logto.
-4. Under **Sign-in & account → Sign-up and sign-in**, add Google to **Social sign-in** and save the experience.
+| Variable             | Required in production | Description                                                                                                     |
+| -------------------- | ---------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`       | Yes                    | PostgreSQL connection URL.                                                                                      |
+| `APP_ORIGIN`         | Yes                    | Public origin without a trailing slash, for example `https://scim.example.com`.                                 |
+| `APP_SECRET`         | Yes                    | Stable, high-entropy secret used to protect sessions and credentials. Generate one with `openssl rand -hex 32`. |
+| `OIDC_ISSUER_URL`    | No                     | OIDC issuer URL. OIDC is enabled only when issuer, client ID, and client secret are all set.                    |
+| `OIDC_CLIENT_ID`     | No                     | OIDC client identifier.                                                                                         |
+| `OIDC_CLIENT_SECRET` | No                     | OIDC confidential-client secret.                                                                                |
+| `OIDC_SCOPES`        | No                     | Space-separated scopes. Defaults to `openid` and must include it.                                               |
 
-SCIM Lab data, Logto data, and installed Logto connectors are retained in named volumes. Back up both PostgreSQL volumes and keep all secrets out of source control.
+Keep `APP_SECRET` stable between deployments. Rotating it invalidates protected sessions and generated SCIM credentials.
 
-## Supported SCIM surface
+## Development
 
-- Users and Groups: GET, POST, PUT, PATCH, and DELETE with SCIM error responses
-- The RFC 7644 filter grammar, sorting, one-based pagination, attribute projection, root queries, and POST `/.search`
-- Atomic SCIM PATCH operations, including value-path filters and primary-value handling
-- Bulk requests with `bulkId` references, `failOnErrors`, and advertised operation/payload limits
-- Weak ETags, conditional GET, conditional PUT/PATCH/DELETE, Location, and Content-Location headers
-- Direct and nested Group membership, including direct/indirect membership on User resources
-- The RFC 7643 enterprise User extension and opaque vendor-extension round trips
-- ServiceProviderConfig, Schemas, and ResourceTypes discovery with complete core attribute metadata
-- Bearer token or HTTP Basic authentication, one active mode per server
-- 100 users and 1,000 retained events per server; events expire after 30 days
+Useful commands:
 
-Password-based login for provisioned Users and the optional `/Me` subject alias are not part of this sandbox's client-credential model; `changePassword.supported` is therefore advertised as `false`.
+| Command                                          | Purpose                                                          |
+| ------------------------------------------------ | ---------------------------------------------------------------- |
+| `pnpm test`                                      | Run all Vitest unit and PostgreSQL integration tests.            |
+| `pnpm astro check`                               | Run Astro and TypeScript diagnostics.                            |
+| `pnpm build`                                     | Create the production Node server build.                         |
+| `pnpm db:generate`                               | Generate a Drizzle migration after changing the database schema. |
+| `pnpm db:migrate`                                | Apply pending database migrations.                               |
+| `pnpm exec prettier --check README.md src tests` | Check formatting for maintained source and test files.           |
+
+Tests in both `tests/**/*.test.ts` and `src/**/*.test.ts` are discovered by Vitest. GitHub Actions starts PostgreSQL, applies every migration, and runs the test suite on pushes and pull requests.
+
+### Project structure
+
+```text
+src/
+├── db/                    PostgreSQL schema
+├── lib/
+│   ├── management/        Console servers, credentials, invites, and retention
+│   ├── scim/
+│   │   ├── api/           HTTP routing, validation, responses, and event capture
+│   │   └── server/        SCIM resources, filters, PATCH, queries, and discovery
+│   └── session/           Anonymous sessions and OIDC account upgrades
+├── pages/                 Astro pages and API routes
+└── presentation/          Console components and styles
+drizzle/                   Ordered PostgreSQL migrations
+tests/scim/                RFC-focused protocol and integration tests
+```
+
+## Docker and Coolify
+
+The included `compose.yaml` is designed as a Coolify service stack. It contains:
+
+- the SCIM Lab application;
+- a one-shot Drizzle migration service;
+- PostgreSQL for SCIM Lab;
+- Logto and its one-shot seed/alteration services; and
+- a separate PostgreSQL database for Logto.
+
+On every Coolify redeployment, the `migrate` service applies pending migrations before the application starts. Existing named database volumes are preserved. If a migration fails, the application is not started.
+
+For a fork, override the example `scimlab.dev` defaults in Coolify:
+
+| Variable               | Example                          |
+| ---------------------- | -------------------------------- |
+| `APP_ORIGIN`           | `https://scim.example.com`       |
+| `LOGTO_ENDPOINT`       | `https://auth.example.com`       |
+| `LOGTO_ADMIN_ENDPOINT` | `https://auth-admin.example.com` |
+| `OIDC_ISSUER_URL`      | `https://auth.example.com/oidc`  |
+| `OIDC_CLIENT_ID`       | Client ID created in Logto       |
+| `OIDC_CLIENT_SECRET`   | Client secret created in Logto   |
+| `OIDC_SCOPES`          | `openid profile email`           |
+
+Assign the public application domain to port `4321`, the Logto user endpoint to `3001`, and the Logto admin endpoint to `3002`. Configure `${APP_ORIGIN}/auth/callback` as the Logto redirect URI and `APP_ORIGIN` as the post-sign-out redirect URI.
+
+Coolify recognizes the `SERVICE_PASSWORD_*`, `SERVICE_HEX_*`, and `SERVICE_REALBASE64_*` variables in `compose.yaml` and generates the database passwords, application secret, and Logto vault key. Back up both PostgreSQL volumes and your deployment secrets.
+
+## Security and privacy
+
+- Require HTTPS for every production SCIM and console endpoint.
+- Use a unique production `APP_SECRET` and database credentials.
+- Request authorization headers and password-like JSON fields are redacted before event storage.
+- SCIM User passwords are retained only as salted scrypt hashes and are never included in resource responses.
+- Request logs can still contain names, email addresses, identifiers, and other personal data.
+- The application is a testing sandbox, not an identity provider or authentication system for provisioned Users.
+
+Please report security issues privately through [GitHub Security Advisories](https://github.com/Evols/scim-lab/security/advisories/new) rather than opening a public issue.
+
+## Contributing
+
+Contributions and RFC-focused interoperability reports are welcome.
+
+1. Fork the repository and create a focused branch.
+2. Add or update tests for behavior changes, including error cases and relevant RFC requirements.
+3. Run `pnpm test`, `pnpm astro check`, and `pnpm build`.
+4. Generate and commit a Drizzle migration when `src/db/schema.ts` changes.
+5. Open a pull request explaining the behavior, compatibility impact, and verification performed.
+
+Keep pull requests focused, preserve existing migrations, and never commit `.env` files, credentials, or production identity data.
+
+## License
+
+SCIM Lab is available under the [MIT License](LICENSE).
