@@ -144,7 +144,7 @@ const tone_mark = { request: "REQ", response: "RES", neutral: "JSON" }[tone];
             {lines.map((line, index) => (
               <span class="grid min-h-5 grid-cols-[3rem_minmax(0,1fr)]" data-payload-line={index}>
                 <span
-                  class="sticky left-0 z-10 grid grid-cols-[1rem_1fr] items-center border-r border-white/5 bg-[#111318] pr-2 text-[11px] leading-5 text-[#52525b] sm:text-xs"
+                  class="sticky left-0 z-10 grid select-none grid-cols-[1rem_1fr] items-center border-r border-white/5 bg-[#111318] pr-2 text-[11px] leading-5 text-[#52525b] sm:text-xs"
                   data-payload-line-number
                 >
                   {fold_ranges.has(index) ? (
