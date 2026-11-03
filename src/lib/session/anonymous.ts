@@ -10,6 +10,7 @@ import { APP_CONFIG } from "../config.ts";
 import { generated_server_name } from "../management/server-name.ts";
 
 export const DAY_MS = 86_400_000;
+export const ANONYMOUS_LIFETIME_DAYS = 14;
 export const TOUCH_INTERVAL_MS = 15 * 60_000;
 export const ANONYMOUS_COOKIE_PREFIX = "anon_v1.";
 const BEARER_PREFIX = "scim_bootstrap_v1.";
@@ -25,6 +26,7 @@ const cookie_schema = z.object({
   workspace: workspace_schema,
   bearer_token: z.string().startsWith(BEARER_PREFIX).max(2048),
   expires_at: z.number().int(),
+  issued_at: z.number().int().optional(),
 });
 
 export type AnonymousWorkspace = z.infer<typeof workspace_schema> & { bearer_token: string };
@@ -48,7 +50,8 @@ export function anonymous_cookie(workspace: AnonymousWorkspace, now = Date.now()
         purpose: "anonymous-console-v1",
         workspace: metadata,
         bearer_token,
-        expires_at: now + 37 * DAY_MS,
+        issued_at: now,
+        expires_at: now + ANONYMOUS_LIFETIME_DAYS * DAY_MS,
       }),
     )
   );
@@ -58,9 +61,13 @@ export function read_anonymous_cookie(token: string, now = Date.now()): Anonymou
   if (!token.startsWith(ANONYMOUS_COOKIE_PREFIX) || token.length > 4096) return null;
   try {
     const value = cookie_schema.parse(JSON.parse(decrypt_secret(token.slice(ANONYMOUS_COOKIE_PREFIX.length))));
+    // Legacy cookies had no issue time and expired 37 days after issuance.
+    // Apply the shorter idle window to them too, before old markers are purged.
+    const issued_at = value.issued_at ?? value.expires_at - 37 * DAY_MS;
     if (
       value.expires_at <= now ||
-      value.expires_at > now + 37 * DAY_MS + 60_000 ||
+      !recently_issued(issued_at, now, ANONYMOUS_LIFETIME_DAYS) ||
+      (value.expires_at > issued_at + ANONYMOUS_LIFETIME_DAYS * DAY_MS && value.issued_at !== undefined) ||
       value.workspace.created_at > now + 60_000
     )
       return null;
@@ -162,7 +169,8 @@ async function check_allocation_quota(transaction: Pick<Database, "select" | "ex
 
 export async function materialize_workspace(workspace: AnonymousWorkspace, database: Database, client_address: string) {
   const ip_hash = workspace_ip_hash(client_address);
-  if (!recently_issued(workspace.created_at, Date.now(), 37)) throw new Error("This temporary workspace has expired.");
+  if (!recently_issued(workspace.created_at, Date.now(), ANONYMOUS_LIFETIME_DAYS))
+    throw new Error("This temporary workspace has expired.");
   return database.transaction(async (transaction) => {
     // Serialize first activation across processes and concurrent SCIM/browser requests.
     await transaction.execute(
@@ -186,7 +194,7 @@ export async function materialize_workspace(workspace: AnonymousWorkspace, datab
       server_id: server.id,
       user_id: user.id,
       allocation_ip_hash: ip_hash,
-      expires_at: new Date(workspace.created_at + 37 * DAY_MS),
+      expires_at: new Date(workspace.created_at + ANONYMOUS_LIFETIME_DAYS * DAY_MS),
     });
     await transaction.insert(console_users).values(user);
     const [created] = await transaction
@@ -226,14 +234,14 @@ export async function revoke_anonymous_cookie(
         server_id: workspace.server_id,
         user_id: workspace.user_id,
         allocation_ip_hash: ip_hash,
-        expires_at: new Date(Date.now() + 37 * DAY_MS),
+        expires_at: new Date(Date.now() + ANONYMOUS_LIFETIME_DAYS * DAY_MS),
         revoked_at: new Date(),
       })
       .onConflictDoUpdate({
         target: anonymous_bootstraps.server_id,
         set: {
           revoked_at: new Date(),
-          expires_at: new Date(Date.now() + 37 * DAY_MS),
+          expires_at: new Date(Date.now() + ANONYMOUS_LIFETIME_DAYS * DAY_MS),
         },
       });
   });
@@ -269,7 +277,7 @@ export async function find_anonymous_workspace(workspace: AnonymousWorkspace, da
     }
     return { user: row.user };
   }
-  if (marker || !recently_issued(workspace.created_at, Date.now(), 37)) return null;
+  if (marker || !recently_issued(workspace.created_at, Date.now(), ANONYMOUS_LIFETIME_DAYS)) return null;
   const records = provisional_records(workspace);
   return { user: records.user, fresh_server: records.server, provisional: workspace };
 }

@@ -26,7 +26,7 @@ export const maintenance_queries = [
   {
     name: "console_users",
     key: "id",
-    predicate: `is_anonymous AND created_at < now() - interval '37 days' AND updated_at < now() - interval '37 days'
+    predicate: `is_anonymous AND created_at < now() - interval '14 days' AND updated_at < now() - interval '14 days'
       AND NOT EXISTS (SELECT 1 FROM scim_servers s WHERE s.created_by_user_id = console_users.id)
       AND NOT EXISTS (SELECT 1 FROM server_members m WHERE m.user_id = console_users.id)
       AND NOT EXISTS (SELECT 1 FROM console_sessions s WHERE s.user_id = console_users.id AND s.expires_at >= now())
@@ -34,13 +34,18 @@ export const maintenance_queries = [
       AND NOT EXISTS (SELECT 1 FROM console_flashes f WHERE f.user_id = console_users.id AND f.expires_at >= now())
       AND NOT EXISTS (SELECT 1 FROM share_invites i WHERE i.created_by_user_id = console_users.id AND i.expires_at >= now() AND i.revoked_at IS NULL)`,
   },
-  { name: "anonymous_bootstraps", key: "server_id", predicate: "expires_at < now()" },
+  {
+    name: "anonymous_bootstraps",
+    key: "server_id",
+    // Include legacy 37-day markers without requiring a data migration.
+    predicate: "expires_at < now() OR COALESCE(revoked_at, created_at) < now() - interval '14 days'",
+  },
 ].map(({ name, key, predicate }) => {
   // Walk large parent tables by their existing primary keys. Each batch checks
   // at most $1 rows, even when almost all remaining records must be retained.
   // The worker carries the cursor across cycles; no extra production index or
   // durable queue is needed to get through the historical backlog.
-  const scan = name === "scim_servers" || name === "console_users";
+  const scan = name === "scim_servers" || name === "console_users" || name === "anonymous_bootstraps";
   const scanned = `scanned AS MATERIALIZED (
     SELECT ${key} FROM public.${name}
     WHERE ${key} >= COALESCE($2::uuid, '00000000-0000-0000-0000-000000000000'::uuid)

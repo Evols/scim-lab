@@ -15,6 +15,53 @@ import { purge_expired_records } from "./maintenance";
 
 describe("expired record maintenance", () => {
   it(
+    "deletes anonymous accounts after 14 inactive days while retaining recent activity and registered accounts",
+    with_rollback_transaction(async (transaction) => {
+      const day = 86_400_000;
+      const inactive = new Date(Date.now() - 15 * day);
+      const recent = new Date(Date.now() - 13 * day);
+      const users = await transaction
+        .insert(console_users)
+        .values([
+          { created_at: inactive, updated_at: inactive },
+          { created_at: recent, updated_at: recent },
+          { created_at: inactive, updated_at: recent },
+          { created_at: inactive, updated_at: inactive, is_anonymous: false },
+          { created_at: inactive, updated_at: inactive },
+          { created_at: inactive, updated_at: inactive },
+        ])
+        .returning();
+      await transaction.insert(console_sessions).values([
+        {
+          token_hash: "recent-anonymous-session",
+          user_id: users[4]!.id,
+          created_at: inactive,
+          last_seen_at: recent,
+          expires_at: new Date(Date.now() + day),
+        },
+        {
+          token_hash: "inactive-anonymous-legacy-session",
+          user_id: users[5]!.id,
+          created_at: inactive,
+          last_seen_at: inactive,
+          expires_at: new Date(Date.now() + 30 * day),
+        },
+      ]);
+
+      await purge_expired_records(transaction, 1000);
+
+      for (const index of [0, 5])
+        expect(
+          await transaction.select().from(console_users).where(eq(console_users.id, users[index]!.id)),
+        ).toHaveLength(0);
+      for (const index of [1, 2, 3, 4])
+        expect(
+          await transaction.select().from(console_users).where(eq(console_users.id, users[index]!.id)),
+        ).toHaveLength(1);
+    }),
+  );
+
+  it(
     "respects recovery windows, explicit deactivation, active sessions, and shared access",
     with_rollback_transaction(async (transaction) => {
       const day = 86_400_000;
