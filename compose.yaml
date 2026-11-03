@@ -47,7 +47,8 @@ services:
       start_period: 15s
 
   # ============================================================
-  # Bounded expiry cleanup runs independently of console traffic.
+  # Clean expired sessions and servers independently of console traffic.
+  # Repeat bounded cleanup passes with a one-hour pause between cycles.
   maintenance:
     build:
       context: .
@@ -62,7 +63,7 @@ services:
     environment:
       DATABASE_URL: >-
         postgresql://scimlab:${SERVICE_PASSWORD_64_SCIM_DB}@database:5432/scim_lab
-    command: ["node", "scripts/maintenance.mjs", "--apply", "--watch"]
+    command: ["node", "scripts/maintenance.mjs", "--apply", "--watch", "--interval-seconds=3600"]
 
   # ============================================================
   # SCIM Lab database migration
