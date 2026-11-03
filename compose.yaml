@@ -158,6 +158,27 @@ services:
       PGPASSWORD: ${SERVICE_PASSWORD_64_SCIM_DB}
       GRAFANA_DATABASE_PASSWORD: ${SERVICE_PASSWORD_64_GRAFANA_DB:?Set SERVICE_PASSWORD_64_GRAFANA_DB in Coolify}
 
+  # Expensive database scans run independently of interactive dashboard reads.
+  metrics-refresh:
+    build:
+      context: .
+      dockerfile: infra/grafana/Dockerfile
+      target: database-setup
+    restart: unless-stopped
+    exclude_from_hc: true
+    init: true
+    depends_on:
+      metrics-setup:
+        condition: service_completed_successfully
+    environment:
+      PGHOST: database
+      PGDATABASE: scim_lab
+      PGUSER: scimlab
+      PGPASSWORD: ${SERVICE_PASSWORD_64_SCIM_DB}
+      PGAPPNAME: scim-lab-metrics-refresh
+      METRICS_REFRESH_INTERVAL_SECONDS: ${METRICS_REFRESH_INTERVAL_SECONDS:-900}
+    command: ["sh", "/opt/metrics/refresh.sh"]
+
   # ============================================================
   # Logto
   # ============================================================

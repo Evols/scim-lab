@@ -70,6 +70,11 @@ describe("Grafana deployment", () => {
   it("waits for migrated metrics permissions and keeps databases off host ports", () => {
     expect(compose.services.grafana.depends_on["metrics-setup"].condition).toBe("service_completed_successfully");
     expect(compose.services["metrics-setup"].depends_on.migrate.condition).toBe("service_completed_successfully");
+    expect(compose.services["metrics-refresh"].depends_on["metrics-setup"].condition).toBe(
+      "service_completed_successfully",
+    );
+    expect(compose.services["metrics-refresh"].command).toEqual(["sh", "/opt/metrics/refresh.sh"]);
+    expect(compose.services["metrics-refresh"].environment.PGUSER).toBe("scimlab");
     for (const service of ["grafana", "database", "logto-database"]) {
       expect(compose.services[service].ports).toBeUndefined();
     }
@@ -91,7 +96,9 @@ describe("Grafana deployment", () => {
       expect(panel.datasource.uid).toBe(datasource.uid);
       for (const target of panel.targets) {
         expect(target.datasource.uid).toBe(datasource.uid);
-        expect(target.rawSql).toMatch(/metrics\.(overview|registrations_daily|anonymous_last_login_daily)/);
+        expect(target.rawSql).toMatch(
+          /metrics\.(overview|registrations_daily|anonymous_last_login_daily|refresh_status)/,
+        );
         expect(target.rawSql).not.toMatch(/public\./);
       }
     }

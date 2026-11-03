@@ -1,5 +1,7 @@
 -- Run after setup.sql against a migrated test database. All fixtures roll back.
 \set ON_ERROR_STOP on
+-- Build a baseline snapshot before the rollback-only fixtures.
+\ir refresh.sql
 BEGIN;
 SET LOCAL TIME ZONE 'Pacific/Auckland';
 
@@ -33,6 +35,16 @@ INSERT INTO expected_activity_deltas VALUES
   ('2026-01-18T00:00:00Z', 1), ('2026-01-19T00:00:00Z', 0),
   ('2026-01-20T00:00:00Z', 1), ('2026-01-23T00:00:00Z', 0);
 
+-- Cached metrics must change only when the owner refreshes them. Run the same
+-- transaction body as the worker; the final ROLLBACK restores the baseline.
+DO $$ BEGIN
+  IF (SELECT coalesce(sum(anonymous_accounts), 0) FROM metrics.anonymous_last_login_daily)
+     <> (SELECT coalesce(sum(anonymous_accounts), 0) FROM previous_anonymous_activity) THEN
+    RAISE EXCEPTION 'Panel reads must use the cached snapshot, not scan changed application rows';
+  END IF;
+END $$;
+\ir refresh-data.sql
+
 CREATE TEMP TABLE expected_counts AS
 SELECT count(*) FILTER (WHERE NOT is_anonymous) AS registered,
        count(*) FILTER (WHERE is_anonymous) AS anonymous
@@ -43,7 +55,18 @@ GRANT SELECT ON previous_anonymous_activity, expected_activity_deltas TO grafana
 SET LOCAL ROLE grafana_metrics;
 
 DO $$
+DECLARE
+  relation_name text;
+  query_plan jsonb;
 BEGIN
+  -- The view contract must never hide a full application-table scan from an
+  -- otherwise innocent SELECT by Grafana. Check all panel-facing query plans.
+  FOREACH relation_name IN ARRAY ARRAY['overview', 'registrations_daily', 'anonymous_last_login_daily', 'refresh_status'] LOOP
+    EXECUTE format('EXPLAIN (VERBOSE, FORMAT JSON) SELECT * FROM metrics.%I', relation_name) INTO query_plan;
+    IF query_plan::text ~ '"Schema"\s*:\s*"public"' THEN
+      RAISE EXCEPTION 'Metrics view % still scans application tables', relation_name;
+    END IF;
+  END LOOP;
   IF NOT EXISTS (
     SELECT FROM metrics.overview, expected_counts
     WHERE registered_accounts = registered AND anonymous_accounts = anonymous
@@ -100,6 +123,16 @@ BEGIN
      OR has_table_privilege(current_user, 'metrics.anonymous_last_login_daily', 'INSERT,UPDATE,DELETE') THEN
     RAISE EXCEPTION 'Grafana has write privileges on metrics views';
   END IF;
+  BEGIN
+    PERFORM * FROM metrics.overview_cache;
+    RAISE EXCEPTION 'Grafana can directly read private cache tables';
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
+  BEGIN
+    UPDATE metrics.refresh_state SET refreshed_at = now();
+    RAISE EXCEPTION 'Grafana can change cached metrics freshness';
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
 END;
 $$;
 

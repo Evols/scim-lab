@@ -30,46 +30,43 @@ GRANT CONNECT ON DATABASE scim_lab TO grafana_metrics;
 CREATE SCHEMA IF NOT EXISTS metrics;
 REVOKE ALL ON SCHEMA metrics FROM PUBLIC;
 
--- Owner-executed views expose aggregate numbers only. Do not grant the Grafana
--- role SELECT on application tables (which contain credentials and personal data).
+-- Dashboard reads never scan application tables. The background refresh job
+-- atomically replaces these small aggregates, retaining the previous snapshot
+-- on error. Ordinary views keep the existing dashboard query contract stable.
+CREATE TABLE IF NOT EXISTS metrics.overview_cache (
+  singleton boolean PRIMARY KEY DEFAULT true CHECK (singleton),
+  registered_accounts bigint NOT NULL,
+  anonymous_accounts bigint NOT NULL,
+  servers bigint NOT NULL,
+  provisioned_users bigint NOT NULL,
+  provisioned_groups bigint NOT NULL
+);
+CREATE TABLE IF NOT EXISTS metrics.registrations_daily_cache (
+  time timestamptz PRIMARY KEY,
+  registrations bigint NOT NULL
+);
+CREATE TABLE IF NOT EXISTS metrics.anonymous_last_login_daily_cache (
+  time timestamptz PRIMARY KEY,
+  anonymous_accounts bigint NOT NULL
+);
+CREATE TABLE IF NOT EXISTS metrics.refresh_state (
+  singleton boolean PRIMARY KEY DEFAULT true CHECK (singleton),
+  refreshed_at timestamptz
+);
+INSERT INTO metrics.refresh_state (singleton) VALUES (true) ON CONFLICT DO NOTHING;
+
 CREATE OR REPLACE VIEW metrics.overview AS
-SELECT
-  (SELECT count(*) FROM public.console_users WHERE NOT is_anonymous) AS registered_accounts,
-  (SELECT count(*) FROM public.console_users WHERE is_anonymous) AS anonymous_accounts,
-  (SELECT count(*) FROM public.scim_servers) AS servers,
-  (SELECT count(*) FROM public.scim_users) AS provisioned_users,
-  (SELECT count(*) FROM public.scim_groups) AS provisioned_groups;
-
--- Upgrades count at sign-up time, rather than first anonymous workspace creation.
--- Rows reflect retained registered accounts, not an immutable analytics ledger.
+SELECT registered_accounts, anonymous_accounts, servers, provisioned_users, provisioned_groups
+FROM metrics.overview_cache;
 CREATE OR REPLACE VIEW metrics.registrations_daily AS
-SELECT date_trunc('day', coalesce(upgraded_at, created_at) AT TIME ZONE 'UTC') AT TIME ZONE 'UTC' AS time,
-       count(*) AS registrations
-FROM public.console_users
-WHERE NOT is_anonymous
-GROUP BY 1;
-
--- Anonymous "last login" means latest known console activity. New stateless
--- sessions update console_users.updated_at; older database sessions record it
--- in last_seen_at. Initial anonymous sessions share the account's creation
--- timestamp, so only refreshed sessions add information. Filter before grouping
--- to avoid aggregating millions of untouched crawler sessions by user ID.
+SELECT time, registrations FROM metrics.registrations_daily_cache;
 CREATE OR REPLACE VIEW metrics.anonymous_last_login_daily AS
-WITH refreshed_sessions AS (
-  SELECT user_id, max(last_seen_at) AS last_seen_at
-  FROM public.console_sessions
-  WHERE last_seen_at > created_at
-  GROUP BY user_id
-)
-SELECT date_trunc('day', greatest(u.created_at, u.updated_at, s.last_seen_at) AT TIME ZONE 'UTC') AT TIME ZONE 'UTC' AS time,
-       count(*) AS anonymous_accounts
-FROM public.console_users u
-LEFT JOIN refreshed_sessions s ON s.user_id = u.id
-WHERE u.is_anonymous
-GROUP BY 1;
+SELECT time, anonymous_accounts FROM metrics.anonymous_last_login_daily_cache;
+CREATE OR REPLACE VIEW metrics.refresh_status AS
+SELECT refreshed_at FROM metrics.refresh_state;
 
 REVOKE ALL ON ALL TABLES IN SCHEMA metrics FROM PUBLIC;
 GRANT USAGE ON SCHEMA metrics TO grafana_metrics;
-GRANT SELECT ON metrics.overview, metrics.registrations_daily, metrics.anonymous_last_login_daily TO grafana_metrics;
+GRANT SELECT ON metrics.overview, metrics.registrations_daily, metrics.anonymous_last_login_daily, metrics.refresh_status TO grafana_metrics;
 
 COMMIT;
