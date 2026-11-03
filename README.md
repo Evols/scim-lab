@@ -217,6 +217,7 @@ The included `compose.yaml` is designed as a Coolify service stack. It contains:
 - the SCIM Lab application;
 - a one-shot Drizzle migration service;
 - PostgreSQL for SCIM Lab;
+- Grafana with a versioned metrics dashboard and a restricted database role;
 - Logto and its one-shot seed/alteration services; and
 - a separate PostgreSQL database for Logto.
 
@@ -237,6 +238,25 @@ For a fork, override the example `scimlab.dev` defaults in Coolify:
 Assign the public application domain to port `4321`, the Logto user endpoint to `3001`, and the Logto admin endpoint to `3002`. Configure `${APP_ORIGIN}/auth/callback` as the Logto redirect URI and `APP_ORIGIN` as the post-sign-out redirect URI.
 
 Coolify recognizes the `SERVICE_PASSWORD_*`, `SERVICE_HEX_*`, and `SERVICE_REALBASE64_*` variables in `compose.yaml` and generates the database passwords, application secret, and Logto vault key. Back up both PostgreSQL volumes and your deployment secrets.
+
+### Private metrics dashboard
+
+Grafana runs in the same Compose stack at `https://metrics.scimlab.dev` by default. Its image includes the configuration, PostgreSQL data source, and dashboard from `infra/grafana/`; no manual dashboard imports or repository bind mounts are needed. Set up the Logto client and Coolify domain before using it:
+
+1. In the existing Logto admin console, create a separate **Traditional web** application named **SCIM Lab Grafana**. Keep the existing SCIM Lab application's client unchanged.
+2. Add the exact redirect URI `https://metrics.scimlab.dev/login/generic_oauth` (or `${GRAFANA_ORIGIN}/login/generic_oauth` for a different origin). Ensure your Logto account has the verified primary email `hutteau.b@gmail.com`.
+3. Set `GRAFANA_OIDC_CLIENT_ID` and `GRAFANA_OIDC_CLIENT_SECRET` in Coolify to the new Logto application's credentials. Set `GRAFANA_ORIGIN` if using another HTTPS origin. Grafana uses the existing `OIDC_ISSUER_URL`, defaulting to `https://auth.scimlab.dev/oidc`; omit a trailing slash.
+4. Point the metrics domain's DNS at the deployment server and assign that HTTPS domain to the **grafana** service's internal port **3000** in Coolify. Do not publish a host port. Redeploy the stack, then open the metrics domain.
+
+Logto handles sign-in, including its existing SSO session. Grafana accepts only the exact email `hutteau.b@gmail.com` with the boolean claim `email_verified=true`, granting it Grafana administrator access. Missing claims and every other email are denied using strict role mapping. The `email` scope supplies these claims; a `gmail.com` domain restriction alone would not restrict access to one person. Password login, anonymous access, public user registration, and default admin creation are disabled. OAuth user creation is enabled so the allowed owner can sign in for the first time. Missing client credentials leave Logto login unusable; there is no password fallback. Existing Grafana sessions last at most one day and expire after one idle hour.
+
+The dashboard shows registered console accounts, persisted anonymous accounts, SCIM servers, provisioned users and groups, and daily account signups in UTC. Provisional anonymous workspaces exist only in browser cookies and are excluded until persisted. Signup dates use `upgraded_at`, falling back to `created_at`. Queries reflect current retained data: deleting accounts removes their signup counts, and totals are live rather than historical snapshots. The dashboard refreshes every five minutes.
+
+The one-shot `metrics-setup` service runs **after migrations** on each deployment. It creates or updates aggregate-only views in the `metrics` schema and the `grafana_metrics` login, including on an existing database volume. Grafana receives its own password through `SERVICE_PASSWORD_64_GRAFANA_DB` and can select only those views, with no grants on underlying account, credential, session, or request tables. Queries have a 15-second timeout. PostgreSQL stays on the internal Docker network; its connection to Grafana uses that network without TLS.
+
+Coolify generates `SERVICE_HEX_64_GRAFANA_SECRET` for Grafana's encryption key. Keep it stable and back up the `grafana_data` volume and deployment secrets alongside the database volumes. Keep secrets in Coolify, never in Git. To add metrics, update `infra/metrics/setup.sql` and the dashboard JSON, then redeploy; edit the repository as the source of truth for provisioned dashboards.
+
+Validation includes `tests/grafana.test.ts` for the access policy and provisioning. CI also runs `infra/metrics/setup.sql` twice against its migrated test database and `infra/metrics/verify.sql` to check aggregate results and denial of private reads and writes. After deploying, verify that your Logto account can open the dashboard and another account cannot.
 
 ## Security and privacy
 

@@ -36,12 +36,18 @@ importers:
       '@astrojs/check':
         specifier: ^0.9.10
         version: 0.9.10(prettier-plugin-astro@0.14.1)(prettier@3.9.6)(typescript@6.0.3)
+      '@types/jmespath':
+        specifier: ^0.15.2
+        version: 0.15.2
       '@types/node':
         specifier: ^26.2.0
         version: 26.2.0
       drizzle-kit:
         specifier: ^0.31.10
         version: 0.31.10
+      jmespath:
+        specifier: 0.16.0
+        version: 0.16.0
       prettier:
         specifier: ^3.9.6
         version: 3.9.6
@@ -54,6 +60,9 @@ importers:
       vitest:
         specifier: ^4.1.10
         version: 4.1.10(@types/node@26.2.0)(vite@8.2.1(@types/node@26.2.0)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.11)(yaml@2.9.0))
+      yaml:
+        specifier: ^2.9.0
+        version: 2.9.0
 
 packages:
 
@@ -1167,6 +1176,9 @@ packages:
   '@types/nlcst@2.0.3':
     resolution: {integrity: sha512-vSYNSDe6Ix3q+6Z7ri9lyWqgGhJTmzRjZRqyq15N0Z/1/UnVsno9G/N40NBijoYx2seFDIl0+B2mgAb9mezUCA==}
 
+  '@types/jmespath@0.15.2':
+    resolution: {integrity: sha512-pegh49FtNsC389Flyo9y8AfkVIZn9MMPE9yJrO9svhq6Fks2MwymULWjZqySuxmctd3ZH4/n7Mr98D+1Qo5vGA==}
+
   '@types/node@26.2.0':
     resolution: {integrity: sha512-5IviulTZeRNp2vAJ514cc/HUlY5nZ9fCbq9DMyC52BrhFZACo3nI0R7qBxhQmo/d27NFe96ur/b7Wwxklda+kg==}
 
@@ -1725,6 +1737,10 @@ packages:
 
   jose@6.2.8:
     resolution: {integrity: sha512-Bsdjwm3Qsd/P0jR+BHDe3LytDfY7WBq2HmCCLIwuVRHMuEC9ae7/R474GIUdF1NgCyZjzVo/A9DOiOBtXq8ZoQ==}
+
+  jmespath@0.16.0:
+    resolution: {integrity: sha512-9FzQjJ7MATs1tSpnco1K6ayiYE3figslrXA72G2HQ/n76RzvYlofyi5QM+iX4YRs/pu3yzxlVQSST23+dMDknw==}
+    engines: {node: '>= 0.6.0'}
 
   js-yaml@4.3.1:
     resolution: {integrity: sha512-CY6crGq313MX8GkwvB7tzgp99vjQxY1++5y10/BKN/GUfHqWaOGQMNZkBvqSzsZKWk/ijwHlWzzkLulsGHhjWQ==}
@@ -3423,6 +3439,8 @@ snapshots:
     dependencies:
       '@types/unist': 3.0.3
 
+  '@types/jmespath@0.15.2': {}
+
   '@types/node@26.2.0':
     dependencies:
       undici-types: 8.3.0
@@ -4036,6 +4054,8 @@ snapshots:
   jiti@2.7.0: {}
 
   jose@6.2.8: {}
+
+  jmespath@0.16.0: {}
 
   js-yaml@4.3.1:
     dependencies:

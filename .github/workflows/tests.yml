@@ -52,3 +52,11 @@ jobs:
 
       - name: Run tests
         run: pnpm test
+
+      - name: Verify metrics setup is repeatable and permissions are restricted
+        env:
+          GRAFANA_DATABASE_PASSWORD: ci-metrics-password
+        run: |
+          psql "$DATABASE_URL" --no-psqlrc --set=ON_ERROR_STOP=1 --file=infra/metrics/setup.sql
+          psql "$DATABASE_URL" --no-psqlrc --set=ON_ERROR_STOP=1 --file=infra/metrics/setup.sql
+          psql "$DATABASE_URL" --no-psqlrc --file=infra/metrics/verify.sql
