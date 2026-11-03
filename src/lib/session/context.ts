@@ -4,6 +4,7 @@ import { take_flash } from "./flash.ts";
 import { find_console_session, SESSION_MAX_AGE_SECONDS, type ConsoleContext } from "./session.ts";
 import {
   ANONYMOUS_COOKIE_PREFIX,
+  ANONYMOUS_LIFETIME_DAYS,
   anonymous_cookie,
   create_provisional_workspace,
   find_anonymous_workspace,
@@ -42,7 +43,12 @@ export async function find_console_context(cookies: CookieStore, database: Datab
       const workspace = read_anonymous_cookie(raw_token);
       if (!workspace) return null;
       const context = await find_anonymous_workspace(workspace, database);
-      if (context) cookies.set(SESSION_COOKIE_NAME, anonymous_cookie(workspace), session_cookie_options(37 * 86_400));
+      if (context)
+        cookies.set(
+          SESSION_COOKIE_NAME,
+          anonymous_cookie(workspace),
+          session_cookie_options(ANONYMOUS_LIFETIME_DAYS * 86_400),
+        );
       return context;
     }
     const context = await find_console_session(raw_token, database);
@@ -64,7 +70,7 @@ export async function get_console_context(cookies: CookieStore, database: Databa
     provisional: workspace,
     session_token: anonymous_cookie(workspace),
   };
-  cookies.set(SESSION_COOKIE_NAME, context.session_token!, session_cookie_options(37 * 86_400));
+  cookies.set(SESSION_COOKIE_NAME, context.session_token!, session_cookie_options(ANONYMOUS_LIFETIME_DAYS * 86_400));
   return context;
 }
 

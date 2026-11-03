@@ -25,8 +25,45 @@ import {
   type AnonymousWorkspace,
 } from "./anonymous";
 import { APP_CONFIG } from "../config";
+import { purge_expired_records } from "../management/maintenance";
 
 describe("deferred workspace activation", { sequential: true }, () => {
+  it(
+    "purges legacy markers after 14 days without allowing expired workspaces to return",
+    with_rollback_transaction(async (transaction) => {
+      const old = create_provisional_workspace(Date.now() - 15 * DAY_MS);
+      const revoked = create_provisional_workspace(Date.now() - 30 * DAY_MS);
+      const recent_revocation = create_provisional_workspace(Date.now() - 30 * DAY_MS);
+      await transaction.insert(anonymous_bootstraps).values(
+        [old, revoked, recent_revocation].map((value, index) => ({
+          server_id: value.server_id,
+          user_id: value.user_id,
+          created_at: new Date(value.created_at),
+          expires_at: new Date(Date.now() + 37 * DAY_MS),
+          revoked_at: index === 0 ? null : new Date(Date.now() - (index === 1 ? 15 : 13) * DAY_MS),
+        })),
+      );
+      await purge_expired_records(transaction, 1000);
+      for (const value of [old, revoked]) {
+        expect(
+          await transaction
+            .select()
+            .from(anonymous_bootstraps)
+            .where(eq(anonymous_bootstraps.server_id, value.server_id)),
+        ).toHaveLength(0);
+        expect(await find_anonymous_workspace(value, transaction)).toBeNull();
+        await expect(materialize_workspace(value, transaction, "192.0.2.201")).rejects.toThrow("expired");
+      }
+      expect(
+        await transaction
+          .select()
+          .from(anonymous_bootstraps)
+          .where(eq(anonymous_bootstraps.server_id, recent_revocation.server_id)),
+      ).toHaveLength(1);
+      expect(await find_anonymous_workspace(recent_revocation, transaction)).toBeNull();
+    }),
+  );
+
   const workspaces: AnonymousWorkspace[] = [];
   function workspace(created_at = Date.now()) {
     const value = create_provisional_workspace(created_at);

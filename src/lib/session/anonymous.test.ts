@@ -10,6 +10,7 @@ import {
 } from "./anonymous";
 import { find_console_context, get_console_context, type CookieStore } from "./context";
 import type { Database } from "../database";
+import { encrypt_secret } from "../crypto";
 
 describe("provisional anonymous workspaces", () => {
   const now = Date.now();
@@ -72,12 +73,32 @@ describe("provisional anonymous workspaces", () => {
     ).toBeNull();
   });
 
-  it("expires unused SCIM credentials at seven days and ownership cookies at 37 days", () => {
+  it("expires unused SCIM credentials at seven days and ownership cookies at 14 days", () => {
     const workspace = create_provisional_workspace(now);
     const cookie = anonymous_cookie(workspace, now);
     expect(read_bootstrap_bearer(workspace.bearer_token, workspace.server_id, now + 7 * DAY_MS - 1)).not.toBeNull();
     expect(read_bootstrap_bearer(workspace.bearer_token, workspace.server_id, now + 7 * DAY_MS)).toBeNull();
-    expect(read_anonymous_cookie(cookie, now + 37 * DAY_MS - 1)).not.toBeNull();
-    expect(read_anonymous_cookie(cookie, now + 37 * DAY_MS)).toBeNull();
+    expect(read_anonymous_cookie(cookie, now + 14 * DAY_MS - 1)).not.toBeNull();
+    expect(read_anonymous_cookie(cookie, now + 14 * DAY_MS)).toBeNull();
+    const renewed = anonymous_cookie(workspace, now + 13 * DAY_MS);
+    expect(read_anonymous_cookie(renewed, now + 26 * DAY_MS)).not.toBeNull();
+    expect(read_anonymous_cookie(renewed, now + 27 * DAY_MS)).toBeNull();
+  });
+
+  it("applies the 14-day idle window to legacy 37-day cookies", () => {
+    const workspace = create_provisional_workspace(now - 60 * DAY_MS);
+    const { bearer_token, ...metadata } = workspace;
+    const cookie =
+      "anon_v1." +
+      encrypt_secret(
+        JSON.stringify({
+          purpose: "anonymous-console-v1",
+          workspace: metadata,
+          bearer_token,
+          expires_at: now + 37 * DAY_MS,
+        }),
+      );
+    expect(read_anonymous_cookie(cookie, now + 14 * DAY_MS - 1)).toEqual(workspace);
+    expect(read_anonymous_cookie(cookie, now + 14 * DAY_MS)).toBeNull();
   });
 });
