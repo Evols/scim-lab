@@ -1,7 +1,7 @@
 import { APP_CONFIG } from "../config.ts";
 import type { Database } from "../database.ts";
 import { take_flash } from "./flash.ts";
-import { find_console_session, type ConsoleContext } from "./session.ts";
+import { find_console_session, SESSION_MAX_AGE_SECONDS, type ConsoleContext } from "./session.ts";
 import {
   ANONYMOUS_COOKIE_PREFIX,
   anonymous_cookie,
@@ -25,7 +25,7 @@ export interface CookieStore {
 export const SESSION_COOKIE_NAME = "scim_lab_session";
 export const FLASH_COOKIE_NAME = "scim_lab_flash";
 
-export function session_cookie_options(max_age = 30 * 86_400) {
+export function session_cookie_options(max_age = SESSION_MAX_AGE_SECONDS) {
   return {
     httpOnly: true,
     secure: APP_CONFIG.is_production,

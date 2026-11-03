@@ -13,6 +13,7 @@ import { create_flash } from "./flash";
 
 describe("session cookie context", () => {
   it("builds secure, HTTP-only session cookie options", () => {
+    expect(session_cookie_options().maxAge).toBe(14 * 86_400);
     expect(session_cookie_options(123)).toMatchObject({
       httpOnly: true,
       sameSite: "lax",

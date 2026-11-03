@@ -39,7 +39,10 @@ describe("server management", () => {
       get_server_lifecycle({ ...server, last_console_access_at: new Date("2026-08-01T00:00:00Z") }, true, now),
     ).toBe("deactivated");
     expect(
-      get_server_lifecycle({ ...server, last_console_access_at: new Date("2026-06-30T00:00:00Z") }, true, now),
+      get_server_lifecycle({ ...server, last_console_access_at: new Date("2026-07-25T00:00:00Z") }, true, now),
+    ).toBe("deactivated");
+    expect(
+      get_server_lifecycle({ ...server, last_console_access_at: new Date("2026-07-24T23:59:59Z") }, true, now),
     ).toBe("expired");
     expect(
       get_server_lifecycle({ ...server, last_console_access_at: new Date("2026-07-10T00:00:01Z") }, false, now),

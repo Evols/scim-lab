@@ -22,7 +22,7 @@ describe("standalone scheduled cleanup", () => {
           id,
           name: "maintenance fixture",
           created_by_user_id: id,
-          last_console_access_at: index === 0 ? new Date() : old,
+          last_console_access_at: index === 0 ? new Date() : new Date(Date.now() - 15 * 86_400_000),
         })),
       );
       await db.insert(server_members).values(ids.map((id) => ({ user_id: id, server_id: id })));
