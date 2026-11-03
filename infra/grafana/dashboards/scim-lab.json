@@ -2,7 +2,7 @@
   "uid": "scim-lab",
   "title": "SCIM Lab",
   "schemaVersion": 41,
-  "version": 1,
+  "version": 2,
   "editable": false,
   "tags": ["scim-lab"],
   "timezone": "utc",
@@ -290,6 +290,61 @@
           "unit": "short",
           "decimals": 0,
           "min": 0,
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 70,
+            "lineWidth": 0
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      }
+    },
+    {
+      "id": 7,
+      "title": "Anonymous accounts by last login (UTC)",
+      "type": "timeseries",
+      "datasource": {
+        "type": "postgres",
+        "uid": "scim-lab-metrics"
+      },
+      "description": "Retained anonymous accounts grouped by their latest known console activity: creation, account activity, or a refreshed legacy session. Each account appears once, on its most recent UTC day. First visits are included. Provisional browser workspaces are excluded. Activity has up to 15 minutes of timestamp rounding; expired sessions can remove older activity evidence. Zero-filled days follow the selected interval.",
+      "gridPos": {
+        "x": 0,
+        "y": 14,
+        "w": 24,
+        "h": 9
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "scim-lab-metrics"
+          },
+          "rawQuery": true,
+          "rawSql": "SELECT days.time, coalesce(activity.anonymous_accounts, 0) AS anonymous_accounts\nFROM generate_series(date_trunc('day', $__timeFrom()::timestamptz AT TIME ZONE 'UTC') AT TIME ZONE 'UTC', date_trunc('day', $__timeTo()::timestamptz AT TIME ZONE 'UTC') AT TIME ZONE 'UTC', interval '1 day') AS days(time)\nLEFT JOIN metrics.anonymous_last_login_daily AS activity ON activity.time = days.time\nORDER BY days.time",
+          "format": "time_series"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "displayName": "Anonymous accounts",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "orange"
+          },
           "custom": {
             "drawStyle": "bars",
             "fillOpacity": 70,

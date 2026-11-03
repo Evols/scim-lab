@@ -130,7 +130,7 @@ services:
       GRAFANA_OIDC_ISSUER_URL: ${OIDC_ISSUER_URL:-https://auth.scimlab.dev/oidc}
       GRAFANA_OIDC_CLIENT_ID: ${GRAFANA_OIDC_CLIENT_ID:-}
       GRAFANA_OIDC_CLIENT_SECRET: ${GRAFANA_OIDC_CLIENT_SECRET:-}
-      GRAFANA_DATABASE_PASSWORD: ${SERVICE_PASSWORD_64_GRAFANA_DB}
+      GRAFANA_DATABASE_PASSWORD: ${SERVICE_PASSWORD_64_GRAFANA_DB:?Set SERVICE_PASSWORD_64_GRAFANA_DB in Coolify}
     volumes:
       - grafana_data:/var/lib/grafana
     healthcheck:
@@ -156,7 +156,7 @@ services:
       PGDATABASE: scim_lab
       PGUSER: scimlab
       PGPASSWORD: ${SERVICE_PASSWORD_64_SCIM_DB}
-      GRAFANA_DATABASE_PASSWORD: ${SERVICE_PASSWORD_64_GRAFANA_DB}
+      GRAFANA_DATABASE_PASSWORD: ${SERVICE_PASSWORD_64_GRAFANA_DB:?Set SERVICE_PASSWORD_64_GRAFANA_DB in Coolify}
 
   # ============================================================
   # Logto

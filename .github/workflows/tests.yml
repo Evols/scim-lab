@@ -59,4 +59,18 @@ jobs:
         run: |
           psql "$DATABASE_URL" --no-psqlrc --set=ON_ERROR_STOP=1 --file=infra/metrics/setup.sql
           psql "$DATABASE_URL" --no-psqlrc --set=ON_ERROR_STOP=1 --file=infra/metrics/setup.sql
+          previous_password=$(psql "$DATABASE_URL" --no-psqlrc --tuples-only --no-align --command="SELECT rolpassword FROM pg_authid WHERE rolname = 'grafana_metrics'")
+          if GRAFANA_DATABASE_PASSWORD='' psql "$DATABASE_URL" --no-psqlrc --file=infra/metrics/setup.sql; then
+            echo 'Metrics setup unexpectedly accepted an empty password'
+            exit 1
+          fi
+          if env -u GRAFANA_DATABASE_PASSWORD psql "$DATABASE_URL" --no-psqlrc --file=infra/metrics/setup.sql; then
+            echo 'Metrics setup unexpectedly accepted a missing password'
+            exit 1
+          fi
+          current_password=$(psql "$DATABASE_URL" --no-psqlrc --tuples-only --no-align --command="SELECT rolpassword FROM pg_authid WHERE rolname = 'grafana_metrics'")
+          test -n "$previous_password"
+          test "$previous_password" = "$current_password"
+          PGHOST=127.0.0.1 PGDATABASE=scim_lab PGUSER=grafana_metrics PGPASSWORD="$GRAFANA_DATABASE_PASSWORD" \
+            psql --no-psqlrc --set=ON_ERROR_STOP=1 --command='SELECT * FROM metrics.overview'
           psql "$DATABASE_URL" --no-psqlrc --file=infra/metrics/verify.sql

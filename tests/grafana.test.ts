@@ -76,6 +76,9 @@ describe("Grafana deployment", () => {
     expect(compose.services.grafana.environment.GRAFANA_DATABASE_PASSWORD).toBe(
       compose.services["metrics-setup"].environment.GRAFANA_DATABASE_PASSWORD,
     );
+    expect(compose.services.grafana.environment.GRAFANA_DATABASE_PASSWORD).toMatch(
+      /^\$\{SERVICE_PASSWORD_64_GRAFANA_DB:\?[^}]+\}$/,
+    );
     expect(datasource.user).toBe("grafana_metrics");
     expect(datasource.editable).toBe(false);
     expect(datasource.secureJsonData.password).toBe("$GRAFANA_DATABASE_PASSWORD");
@@ -88,7 +91,7 @@ describe("Grafana deployment", () => {
       expect(panel.datasource.uid).toBe(datasource.uid);
       for (const target of panel.targets) {
         expect(target.datasource.uid).toBe(datasource.uid);
-        expect(target.rawSql).toMatch(/metrics\.(overview|registrations_daily)/);
+        expect(target.rawSql).toMatch(/metrics\.(overview|registrations_daily|anonymous_last_login_daily)/);
         expect(target.rawSql).not.toMatch(/public\./);
       }
     }
