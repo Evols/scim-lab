@@ -1,0 +1,31 @@
+---
+interface Props {
+  challenge: string;
+  return_to: string;
+}
+const { challenge, return_to } = Astro.props;
+---
+
+<main class="grid min-h-[calc(100svh-3.5rem)] place-items-center px-4 py-10 sm:py-16">
+  <section class="w-full max-w-xl text-center">
+    <p class="text-sm font-semibold text-[#52525b]">SCIM Lab</p>
+    <h1 class="mt-4 text-3xl font-semibold tracking-tight text-[#09090b]">Provisioning without the ceremony.</h1>
+    <p class="mt-4 text-sm leading-6 text-[#71717a]">Your endpoint and bearer token will be ready immediately.</p>
+    <form class="mt-6" action="/api/bootstrap" method="POST" data-bootstrap>
+      <input type="hidden" name="challenge" value={challenge} />
+      <input type="hidden" name="return_to" value={return_to} />
+      <button class="h-10 cursor-pointer rounded-md bg-[#18181b] px-4 text-sm font-medium text-white" type="submit"
+        >Create temporary server</button
+      >
+      <p class="mt-3 text-xs text-[#71717a]" role="status" data-bootstrap-status></p>
+    </form>
+  </section>
+</main>
+<script>
+  const form = document.querySelector<HTMLFormElement>("[data-bootstrap]");
+  if (form && navigator.cookieEnabled) {
+    const status = document.querySelector<HTMLElement>("[data-bootstrap-status]");
+    if (status) status.textContent = "Preparing your server…";
+    form.requestSubmit();
+  }
+</script>

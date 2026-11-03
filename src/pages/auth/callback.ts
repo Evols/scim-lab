@@ -1,8 +1,8 @@
 import type { APIRoute } from "astro";
 import { complete_oidc_login, take_oidc_transaction } from "../../lib/session/authentication";
-import { SESSION_COOKIE_NAME, session_cookie_options } from "../../lib/session/context";
+import { find_console_context, SESSION_COOKIE_NAME, session_cookie_options } from "../../lib/session/context";
 import { get_oidc_configuration, oidc } from "../../lib/session/oidc";
-import { find_console_session, replace_session } from "../../lib/session/session";
+import { replace_session } from "../../lib/session/session";
 import { APP_CONFIG } from "../../lib/config";
 import { db } from "../../lib/database";
 
@@ -21,8 +21,7 @@ export const GET: APIRoute = async ({ cookies, redirect, url }) => {
     });
   }
 
-  const session_token = cookies.get(SESSION_COOKIE_NAME)?.value;
-  const current_context = session_token ? await find_console_session(session_token, db) : null;
+  const current_context = await find_console_context(cookies, db);
   if (!current_context || !current_context.user.is_anonymous || current_context.user.id !== transaction.user_id) {
     return new Response("This sign-in attempt does not belong to the current session.", {
       status: 400,

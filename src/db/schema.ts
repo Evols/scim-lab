@@ -53,6 +53,24 @@ export const console_sessions = pgTable(
   ],
 );
 
+// Consumption/revocation markers deliberately survive server/user deletion.
+// They prevent a previously issued bootstrap capability from recreating rows.
+export const anonymous_bootstraps = pgTable(
+  "anonymous_bootstraps",
+  {
+    server_id: uuid("server_id").primaryKey(),
+    user_id: uuid("user_id").notNull(),
+    allocation_ip_hash: text("allocation_ip_hash"),
+    created_at: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    expires_at: timestamp("expires_at", { withTimezone: true }).notNull(),
+    revoked_at: timestamp("revoked_at", { withTimezone: true }),
+  },
+  (table) => [
+    index("idx_anonymous_bootstraps_expires_at").on(table.expires_at),
+    index("idx_anonymous_bootstraps_ip_created_at").on(table.allocation_ip_hash, table.created_at),
+  ],
+);
+
 export const oidc_transactions = pgTable(
   "oidc_transactions",
   {

@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { get_server_lifecycle } from "../../management/server";
 import { db } from "../../database";
 import { console_users, scim_servers } from "../../../db/schema.ts";
+import { materialize_workspace, ProvisioningLimitError, read_bootstrap_bearer } from "../../session/anonymous.ts";
 import { authenticate } from "./auth.ts";
 import { discovery_response } from "./discovery.ts";
 import { scim_error } from "./error.ts";
@@ -15,19 +16,40 @@ export async function handle_scim_request(
   request: Request,
   server_id: string,
   path: string | undefined,
+  client_address?: string,
 ): Promise<Response> {
   const started_at = Date.now();
   // Keep the original body for event logging; parsed Zod objects may omit
   // unknown fields from nested structures.
   const raw_body = ["POST", "PUT", "PATCH"].includes(request.method) ? await request.text() : "";
-  const rows = await db
-    .select({ server: scim_servers, creator: console_users })
-    .from(scim_servers)
-    .innerJoin(console_users, eq(scim_servers.created_by_user_id, console_users.id))
-    .where(eq(scim_servers.id, server_id))
-    .limit(1);
+  const find_server = () =>
+    db
+      .select({ server: scim_servers, creator: console_users })
+      .from(scim_servers)
+      .innerJoin(console_users, eq(scim_servers.created_by_user_id, console_users.id))
+      .where(eq(scim_servers.id, server_id))
+      .limit(1);
+  let rows = await find_server();
   if (!rows[0]) {
-    return scim_error(404, "SCIM server not found.");
+    const token = request.headers.get("authorization")?.match(/^Bearer\s+(.+)$/i)?.[1];
+    const workspace = token ? read_bootstrap_bearer(token, server_id) : null;
+    if (!workspace) return scim_error(404, "SCIM server not found.");
+    try {
+      await materialize_workspace(workspace, db, client_address ?? "");
+    } catch (error) {
+      if (error instanceof ProvisioningLimitError) {
+        const response = scim_error(429, error.message);
+        response.headers.set("retry-after", "60");
+        return response;
+      }
+      // Consumed bootstrap credentials must never resurrect deleted servers.
+      if (error instanceof Error && error.message === "This temporary workspace is no longer available.") {
+        return scim_error(404, "SCIM server not found.");
+      }
+      throw error;
+    }
+    rows = await find_server();
+    if (!rows[0]) return scim_error(404, "SCIM server not found.");
   }
 
   const { server, creator } = rows[0];

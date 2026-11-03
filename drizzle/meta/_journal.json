@@ -29,6 +29,20 @@
       "when": 1786383060317,
       "tag": "0003_narrow_wallow",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793730420500,
+      "tag": "0004_sticky_odin",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793732860075,
+      "tag": "0005_skinny_brother_voodoo",
+      "breakpoints": true
     }
   ]
 }

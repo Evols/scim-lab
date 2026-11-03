@@ -1,8 +1,16 @@
-import { purge_expired_records } from "../management/maintenance.ts";
 import { APP_CONFIG } from "../config.ts";
 import type { Database } from "../database.ts";
 import { take_flash } from "./flash.ts";
-import { create_anonymous_context, find_console_session, type ConsoleContext } from "./session.ts";
+import { find_console_session, type ConsoleContext } from "./session.ts";
+import {
+  ANONYMOUS_COOKIE_PREFIX,
+  anonymous_cookie,
+  create_provisional_workspace,
+  find_anonymous_workspace,
+  materialize_workspace,
+  provisional_records,
+  read_anonymous_cookie,
+} from "./anonymous.ts";
 
 interface CookieValue {
   value: string;
@@ -27,20 +35,46 @@ export function session_cookie_options(max_age = 30 * 86_400) {
   };
 }
 
-export async function get_console_context(cookies: CookieStore, database: Database): Promise<ConsoleContext> {
-  await purge_expired_records(database);
-
+export async function find_console_context(cookies: CookieStore, database: Database): Promise<ConsoleContext | null> {
   const raw_token = cookies.get(SESSION_COOKIE_NAME)?.value;
   if (raw_token) {
+    if (raw_token.startsWith(ANONYMOUS_COOKIE_PREFIX)) {
+      const workspace = read_anonymous_cookie(raw_token);
+      if (!workspace) return null;
+      const context = await find_anonymous_workspace(workspace, database);
+      if (context) cookies.set(SESSION_COOKIE_NAME, anonymous_cookie(workspace), session_cookie_options(37 * 86_400));
+      return context;
+    }
     const context = await find_console_session(raw_token, database);
     if (context) {
       return context;
     }
   }
+  return null;
+}
 
-  const context = await create_anonymous_context(database);
+export async function get_console_context(cookies: CookieStore, database: Database): Promise<ConsoleContext> {
+  const existing = await find_console_context(cookies, database);
+  if (existing) return existing;
+  const workspace = create_provisional_workspace();
+  const records = provisional_records(workspace);
+  const context: ConsoleContext = {
+    user: records.user,
+    fresh_server: records.server,
+    provisional: workspace,
+    session_token: anonymous_cookie(workspace),
+  };
   cookies.set(SESSION_COOKIE_NAME, context.session_token!, session_cookie_options(37 * 86_400));
   return context;
+}
+
+export async function persist_console_context(
+  context: ConsoleContext,
+  database: Database,
+  client_address: string,
+): Promise<ConsoleContext> {
+  if (context.provisional) await materialize_workspace(context.provisional, database, client_address);
+  return { user: context.user };
 }
 
 export async function get_flash(

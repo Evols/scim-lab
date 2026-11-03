@@ -1,6 +1,6 @@
 import type { APIRoute } from "astro";
 import { read_server_credential } from "../../lib/management/credential";
-import { get_console_context } from "../../lib/session/context";
+import { find_console_context } from "../../lib/session/context";
 import { db } from "../../lib/database";
 
 export const prerender = false;
@@ -20,7 +20,8 @@ export const POST: APIRoute = async ({ cookies, request, url }) => {
   if (origin && origin !== url.origin) {
     return json({ error: "Invalid request origin." }, 403);
   }
-  const context = await get_console_context(cookies, db);
+  const context = await find_console_context(cookies, db);
+  if (!context) return json({ error: "Open the console before making changes." }, 401);
   if (context.user.is_anonymous) {
     return json(
       {

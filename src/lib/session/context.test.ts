@@ -6,6 +6,7 @@ import {
   get_flash,
   SESSION_COOKIE_NAME,
   session_cookie_options,
+  persist_console_context,
   type CookieStore,
 } from "./context";
 import { create_flash } from "./flash";
@@ -61,7 +62,11 @@ describe("session cookie context", () => {
           values.delete(name);
         },
       };
-      const context = await get_console_context(cookies, transaction);
+      const context = await persist_console_context(
+        await get_console_context(cookies, transaction),
+        transaction,
+        "192.0.2.99",
+      );
       const token = await create_flash(context.user.id, { message: "Done" }, transaction);
       values.set(FLASH_COOKIE_NAME, token);
 
