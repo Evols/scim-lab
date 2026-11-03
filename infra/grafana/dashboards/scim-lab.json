@@ -1,0 +1,312 @@
+{
+  "uid": "scim-lab",
+  "title": "SCIM Lab",
+  "schemaVersion": 41,
+  "version": 1,
+  "editable": false,
+  "tags": ["scim-lab"],
+  "timezone": "utc",
+  "refresh": "5m",
+  "time": {
+    "from": "now-30d",
+    "to": "now"
+  },
+  "description": "Live database aggregates. Accounts are console sign-ins; provisioned SCIM users cannot sign in. Daily signups reflect retained accounts; deleted rows are not historical snapshots.",
+  "panels": [
+    {
+      "id": 1,
+      "title": "Registered accounts",
+      "description": "Console accounts upgraded through OpenID Connect.",
+      "type": "stat",
+      "datasource": {
+        "type": "postgres",
+        "uid": "scim-lab-metrics"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 5,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "scim-lab-metrics"
+          },
+          "rawQuery": true,
+          "rawSql": "SELECT registered_accounts FROM metrics.overview",
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 2,
+      "title": "Anonymous accounts",
+      "description": "Persisted anonymous accounts only; provisional browser workspaces have no database row.",
+      "type": "stat",
+      "datasource": {
+        "type": "postgres",
+        "uid": "scim-lab-metrics"
+      },
+      "gridPos": {
+        "x": 5,
+        "y": 0,
+        "w": 5,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "scim-lab-metrics"
+          },
+          "rawQuery": true,
+          "rawSql": "SELECT anonymous_accounts FROM metrics.overview",
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 3,
+      "title": "SCIM servers",
+      "description": "All retained servers, including deactivated servers pending cleanup.",
+      "type": "stat",
+      "datasource": {
+        "type": "postgres",
+        "uid": "scim-lab-metrics"
+      },
+      "gridPos": {
+        "x": 10,
+        "y": 0,
+        "w": 5,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "scim-lab-metrics"
+          },
+          "rawQuery": true,
+          "rawSql": "SELECT servers FROM metrics.overview",
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 4,
+      "title": "Provisioned users",
+      "description": "SCIM user resources across all servers; these are not console accounts.",
+      "type": "stat",
+      "datasource": {
+        "type": "postgres",
+        "uid": "scim-lab-metrics"
+      },
+      "gridPos": {
+        "x": 15,
+        "y": 0,
+        "w": 4,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "scim-lab-metrics"
+          },
+          "rawQuery": true,
+          "rawSql": "SELECT provisioned_users FROM metrics.overview",
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 5,
+      "title": "Provisioned groups",
+      "description": "SCIM group resources across all servers.",
+      "type": "stat",
+      "datasource": {
+        "type": "postgres",
+        "uid": "scim-lab-metrics"
+      },
+      "gridPos": {
+        "x": 19,
+        "y": 0,
+        "w": 4,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "scim-lab-metrics"
+          },
+          "rawQuery": true,
+          "rawSql": "SELECT provisioned_groups FROM metrics.overview",
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 6,
+      "title": "Daily account signups (UTC)",
+      "type": "timeseries",
+      "datasource": {
+        "type": "postgres",
+        "uid": "scim-lab-metrics"
+      },
+      "description": "Uses account upgrade time, with creation time as a fallback. Counts retained registered accounts; removed accounts disappear. Zero-filled UTC days in the selected interval.",
+      "gridPos": {
+        "x": 0,
+        "y": 5,
+        "w": 24,
+        "h": 9
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "scim-lab-metrics"
+          },
+          "rawQuery": true,
+          "rawSql": "SELECT days.time, coalesce(signups.registrations, 0) AS registrations\nFROM generate_series(date_trunc('day', $__timeFrom()::timestamptz AT TIME ZONE 'UTC') AT TIME ZONE 'UTC', date_trunc('day', $__timeTo()::timestamptz AT TIME ZONE 'UTC') AT TIME ZONE 'UTC', interval '1 day') AS days(time)\nLEFT JOIN metrics.registrations_daily AS signups ON signups.time = days.time\nORDER BY days.time",
+          "format": "time_series"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 70,
+            "lineWidth": 0
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      }
+    }
+  ]
+}

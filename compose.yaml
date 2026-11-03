@@ -109,6 +109,56 @@ services:
       start_period: 10s
 
   # ============================================================
+  # Grafana: Logto-only access and versioned application metrics
+  # ============================================================
+  grafana:
+    build:
+      context: .
+      dockerfile: infra/grafana/Dockerfile
+      target: grafana
+    restart: unless-stopped
+    depends_on:
+      metrics-setup:
+        condition: service_completed_successfully
+      logto:
+        condition: service_healthy
+    expose:
+      - "3000"
+    environment:
+      GRAFANA_ORIGIN: ${GRAFANA_ORIGIN:-https://metrics.scimlab.dev}
+      GRAFANA_SECRET_KEY: ${SERVICE_HEX_64_GRAFANA_SECRET}
+      GRAFANA_OIDC_ISSUER_URL: ${OIDC_ISSUER_URL:-https://auth.scimlab.dev/oidc}
+      GRAFANA_OIDC_CLIENT_ID: ${GRAFANA_OIDC_CLIENT_ID:-}
+      GRAFANA_OIDC_CLIENT_SECRET: ${GRAFANA_OIDC_CLIENT_SECRET:-}
+      GRAFANA_DATABASE_PASSWORD: ${SERVICE_PASSWORD_64_GRAFANA_DB}
+    volumes:
+      - grafana_data:/var/lib/grafana
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:3000/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  # Apply metrics views and rotate the restricted DB password on redeployment.
+  metrics-setup:
+    build:
+      context: .
+      dockerfile: infra/grafana/Dockerfile
+      target: database-setup
+    restart: "no"
+    exclude_from_hc: true
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      PGHOST: database
+      PGDATABASE: scim_lab
+      PGUSER: scimlab
+      PGPASSWORD: ${SERVICE_PASSWORD_64_SCIM_DB}
+      GRAFANA_DATABASE_PASSWORD: ${SERVICE_PASSWORD_64_GRAFANA_DB}
+
+  # ============================================================
   # Logto
   # ============================================================
   logto:
@@ -243,3 +293,4 @@ services:
 volumes:
   scim_pgdata:
   logto_pgdata:
+  grafana_data:
