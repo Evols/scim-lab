@@ -24,7 +24,7 @@ export function get_server_lifecycle(
   if (inactive_ms < active_window_ms && !server.deactivated_at) {
     return "active";
   }
-  const recovery_ms = (is_anonymous ? 30 : 90) * 86_400_000;
+  const recovery_ms = (is_anonymous ? 7 : 90) * 86_400_000;
   return now.getTime() <= deactivated_at.getTime() + recovery_ms ? "deactivated" : "expired";
 }
 

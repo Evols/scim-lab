@@ -5,7 +5,7 @@ import postgres from "postgres";
 import { maintenance_queries } from "./maintenance-queries.mjs";
 
 export function parse_options(args) {
-  const options = { apply: false, watch: false, batch_size: 100, max_batches: 10, interval_seconds: 60 };
+  const options = { apply: false, watch: false, batch_size: 100, max_batches: 10, interval_seconds: 3600 };
   for (const arg of args) {
     if (arg === "--apply") options.apply = true;
     else if (arg === "--watch") options.watch = true;

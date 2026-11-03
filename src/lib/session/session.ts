@@ -1,10 +1,12 @@
-import { and, eq, gt, lt } from "drizzle-orm";
+import { and, eq, gt, gte, lt } from "drizzle-orm";
 import type { ConsoleUserRecord, ScimServerRecord } from "../../db/schema.ts";
 import { console_sessions, console_users, scim_servers, server_members } from "../../db/schema.ts";
 import { encrypt_secret, generated_bearer_token, hash_secret, random_secret } from "../crypto.ts";
 import type { Database } from "../database.ts";
 import { generated_server_name } from "../management/server-name.ts";
 import { TOUCH_INTERVAL_MS, type AnonymousWorkspace } from "./anonymous.ts";
+
+export const SESSION_MAX_AGE_SECONDS = 14 * 86_400;
 
 export interface ConsoleContext {
   user: ConsoleUserRecord;
@@ -19,7 +21,13 @@ export async function find_console_session(raw_token: string, database: Database
     .select({ session: console_sessions, user: console_users })
     .from(console_sessions)
     .innerJoin(console_users, eq(console_sessions.user_id, console_users.id))
-    .where(and(eq(console_sessions.token_hash, token_hash), gt(console_sessions.expires_at, new Date())))
+    .where(
+      and(
+        eq(console_sessions.token_hash, token_hash),
+        gt(console_sessions.expires_at, new Date()),
+        gte(console_sessions.last_seen_at, new Date(Date.now() - SESSION_MAX_AGE_SECONDS * 1000)),
+      ),
+    )
     .limit(1);
   if (!rows[0]) {
     return null;
@@ -29,7 +37,7 @@ export async function find_console_session(raw_token: string, database: Database
       .update(console_sessions)
       .set({
         last_seen_at: new Date(),
-        expires_at: new Date(Date.now() + (rows[0].user.is_anonymous ? 37 : 30) * 86_400_000),
+        expires_at: new Date(Date.now() + SESSION_MAX_AGE_SECONDS * 1000),
       })
       .where(
         and(
@@ -52,7 +60,7 @@ export async function create_anonymous_context(database: Database): Promise<Cons
     await transaction.insert(console_sessions).values({
       token_hash: hash_secret(session_token),
       user_id: user.id,
-      expires_at: new Date(Date.now() + 37 * 86_400_000),
+      expires_at: new Date(Date.now() + SESSION_MAX_AGE_SECONDS * 1000),
     });
     const [server] = await transaction
       .insert(scim_servers)
@@ -78,7 +86,7 @@ export async function replace_session(user_id: string, database: Database): Prom
     await transaction.insert(console_sessions).values({
       token_hash: hash_secret(session_token),
       user_id,
-      expires_at: new Date(Date.now() + 30 * 86_400_000),
+      expires_at: new Date(Date.now() + SESSION_MAX_AGE_SECONDS * 1000),
     });
   });
   return session_token;

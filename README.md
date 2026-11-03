@@ -97,7 +97,18 @@ In production, keep the application behind the trusted reverse proxy and configu
 
 Apply migrations before deploying the new application and worker (`pnpm db:migrate`). Migration `0004` adds a small activation/revocation table; the subsequent per-IP quota migration adds an IP-hash column and a composite index to that table. Neither rebuilds indexes on existing large tables. These markers prevent an old provisional credential from recreating a deleted server, and prevent a logged-out or upgraded anonymous cookie from restoring console access.
 
-The Compose stack includes a `maintenance` service. It performs bounded cleanup independently of page traffic, retaining the existing server recovery windows: anonymous servers normally expire after 7 + 30 days of console inactivity, and registered-owner servers after 30 + 90 days. Explicit deactivation timestamps are respected. Anonymous users are removed only after 37 days without console activity, with no owned servers, memberships, valid sessions, or other live temporary records. Registered users are retained. Session/server activity timestamps are updated at most every 15 minutes, introducing up to 15 minutes of inactivity-window rounding.
+The Compose stack starts a `maintenance` service automatically, with a one-hour pause between bounded cleanup cycles and automatic restart unless stopped. Cleanup runs independently of page traffic. Anonymous servers normally expire after **14 days of console inactivity**: 7 active days plus a 7-day recovery window. Registered-owner servers expire after 30 + 90 days. Explicit deactivation timestamps are respected. Deleting an expired server also removes its provisioned users, groups, memberships, and request events. Anonymous console users are removed only after 37 days without console activity, with no owned servers, memberships, valid sessions, or other live temporary records. Registered users are retained. Session/server activity timestamps are updated at most every 15 minutes, introducing up to 15 minutes of inactivity-window rounding.
+
+Database-backed console sessions expire after 14 days of inactivity and are removed by maintenance. The inactivity limit also applies to existing sessions issued with longer expiry dates. New sign-in cookies last 14 days; anonymous cookie-based workspaces retain their 37-day lifetime. Session cleanup does not delete accounts or SCIM servers.
+
+Deploy the updated application and maintenance worker together so both enforce the same server lifetime. For an existing Compose deployment, rebuild and restart both services:
+
+```sh
+docker compose up -d --build application maintenance
+docker compose logs --tail=50 maintenance
+```
+
+The worker runs immediately on startup, then pauses between cycles. Large backlogs may require multiple cycles before every eligible row has been visited.
 
 For other deployments, schedule the command or run its worker mode. Set `DATABASE_URL` explicitly in the command environment; the standalone script does not load `.env` automatically.
 
@@ -108,14 +119,14 @@ pnpm db:maintenance
 # Apply a bounded cleanup pass.
 pnpm db:maintenance --apply
 
-# Continuously clean in small batches, pausing 60 seconds between cycles.
+# Continuously clean in small batches, pausing one hour between cycles.
 pnpm db:maintenance --apply --watch
 
 # Larger one-off backlog pass; tune to database load and available WAL space.
 pnpm db:maintenance --apply --batch-size=1000 --max-batches=100000
 ```
 
-The defaults are 100 rows per batch and at most 10 batches per table per cycle. `--interval-seconds=60` controls the worker pause. Parent tables are scanned using their existing UUID primary keys; cursors carry across worker cycles, including batches with no eligible rows. A worker restart starts a new scan. `counts` reports deleted parent rows (or eligible sampled rows in preview), while `scanned` reports examined server/user rows. Foreign-key cascades can remove additional child rows. Each batch commits separately, with a 30-second statement timeout and a 2-second lock timeout. Worker errors are logged and retried on the next cycle.
+The defaults are 100 rows per batch and at most 10 batches per table per cycle. `--interval-seconds=3600` controls the worker pause. Parent tables are scanned using their existing UUID primary keys; cursors carry across worker cycles, including batches with no eligible rows. A worker restart starts a new scan. `counts` reports deleted parent rows (or eligible sampled rows in preview), while `scanned` reports examined server/user rows. Foreign-key cascades can remove additional child rows. Each batch commits separately, with a 30-second statement timeout and a 2-second lock timeout. Worker errors are logged and retried on the next cycle.
 
 Deletion makes storage reusable; it does not guarantee smaller database files. After stopping excess allocations and removing the backlog, plan physical compaction separately. `VACUUM FULL` rebuilds a table and its indexes, requires an exclusive lock and additional disk space, and should be scheduled in a maintenance window. No compaction runs automatically.
 

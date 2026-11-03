@@ -41,12 +41,12 @@ describe("expired record maintenance", () => {
           {
             name: "anonymous expired",
             created_by_user_id: users[0]!.id,
-            last_console_access_at: new Date(Date.now() - 38 * day),
+            last_console_access_at: new Date(Date.now() - 15 * day),
           },
           {
             name: "anonymous recovery",
             created_by_user_id: users[1]!.id,
-            last_console_access_at: new Date(Date.now() - 36 * day),
+            last_console_access_at: new Date(Date.now() - 13 * day),
           },
           {
             name: "registered expired",
@@ -61,7 +61,7 @@ describe("expired record maintenance", () => {
           {
             name: "explicit deactivation",
             created_by_user_id: users[4]!.id,
-            deactivated_at: new Date(Date.now() - 31 * day),
+            deactivated_at: new Date(Date.now() - 8 * day),
           },
         ])
         .returning();
@@ -103,7 +103,19 @@ describe("expired record maintenance", () => {
 
       await transaction.insert(console_sessions).values([
         { token_hash: "expired-session", user_id: user!.id, expires_at: past },
-        { token_hash: "active-session", user_id: user!.id, expires_at: future },
+        {
+          token_hash: "inactive-legacy-session",
+          user_id: user!.id,
+          last_seen_at: new Date(Date.now() - 15 * 86_400_000),
+          expires_at: future,
+        },
+        {
+          token_hash: "active-session",
+          user_id: user!.id,
+          created_at: new Date(Date.now() - 20 * 86_400_000),
+          last_seen_at: new Date(Date.now() - 13 * 86_400_000),
+          expires_at: future,
+        },
       ]);
       await transaction.insert(console_flashes).values([
         { token_hash: "expired-flash", user_id: user!.id, payload: {}, expires_at: past },

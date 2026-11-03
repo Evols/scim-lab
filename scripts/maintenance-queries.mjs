@@ -1,6 +1,10 @@
 // Fixed identifiers/predicates. Parameters are a batch size and a UUID cursor.
 export const maintenance_queries = [
-  { name: "console_sessions", key: "token_hash", predicate: "expires_at < now()" },
+  {
+    name: "console_sessions",
+    key: "token_hash",
+    predicate: "expires_at < now() OR last_seen_at < now() - interval '14 days'",
+  },
   { name: "console_flashes", key: "token_hash", predicate: "expires_at < now()" },
   { name: "oidc_transactions", key: "state_hash", predicate: "expires_at < now()" },
   {
@@ -16,7 +20,7 @@ export const maintenance_queries = [
       SELECT 1 FROM console_users u WHERE u.id = scim_servers.created_by_user_id
       AND COALESCE(scim_servers.deactivated_at,
         scim_servers.last_console_access_at + CASE WHEN u.is_anonymous THEN interval '7 days' ELSE interval '30 days' END
-      ) + CASE WHEN u.is_anonymous THEN interval '30 days' ELSE interval '90 days' END < now()
+      ) + CASE WHEN u.is_anonymous THEN interval '7 days' ELSE interval '90 days' END < now()
     )`,
   },
   {
