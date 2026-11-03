@@ -3,8 +3,8 @@ import { handle_scim_request } from "../../../../lib/scim/scim.ts";
 
 export const prerender = false;
 
-const handler: APIRoute = ({ request, params }) =>
-  handle_scim_request(request, String(params.server_id ?? ""), params.path);
+const handler: APIRoute = ({ request, params, clientAddress }) =>
+  handle_scim_request(request, String(params.server_id ?? ""), params.path, clientAddress);
 
 export const GET = handler;
 export const POST = handler;

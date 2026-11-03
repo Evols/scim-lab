@@ -2,7 +2,13 @@ import type { APIRoute } from "astro";
 import { rotate_server_auth } from "../../lib/management/credential";
 import { create_share_invite, revoke_share_invite } from "../../lib/management/invite";
 import { create_server, delete_server, reactivate_server, rename_server } from "../../lib/management/server";
-import { FLASH_COOKIE_NAME, get_console_context, session_cookie_options } from "../../lib/session/context";
+import {
+  FLASH_COOKIE_NAME,
+  find_console_context,
+  persist_console_context,
+  session_cookie_options,
+} from "../../lib/session/context";
+import { ProvisioningLimitError } from "../../lib/session/anonymous";
 import { create_flash } from "../../lib/session/flash";
 import { db } from "../../lib/database";
 
@@ -12,15 +18,38 @@ function safe_path(value: string): string {
   return value.startsWith("/") && !value.startsWith("//") ? value : "/";
 }
 
-export const POST: APIRoute = async ({ cookies, redirect, request, url }) => {
+export const POST: APIRoute = async ({ cookies, redirect, request, url, clientAddress }) => {
   const origin = request.headers.get("origin");
   if (origin && origin !== url.origin) {
     return new Response("Invalid request origin.", { status: 403 });
   }
-  const context = await get_console_context(cookies, db);
+  let context = await find_console_context(cookies, db);
+  if (!context) return new Response("Open the console before making changes.", { status: 401 });
   const form = await request.formData();
   const intent = String(form.get("intent") ?? "");
   const server_id = String(form.get("server_id") ?? "");
+  if (
+    ![
+      "create_server",
+      "rename_server",
+      "rotate_auth",
+      "reactivate_server",
+      "create_invite",
+      "revoke_invite",
+      "delete_server",
+    ].includes(intent)
+  ) {
+    return new Response("Unknown console action.", { status: 400 });
+  }
+  if (context.provisional && server_id !== context.provisional.server_id)
+    return new Response("Server not found.", { status: 404 });
+  try {
+    context = await persist_console_context(context, db, clientAddress);
+  } catch (error) {
+    if (error instanceof ProvisioningLimitError)
+      return new Response(error.message, { status: 429, headers: { "retry-after": "60" } });
+    throw error;
+  }
   let redirect_to = safe_path(String(form.get("return_to") ?? "/"));
   let flash: Record<string, unknown> | null = null;
   try {

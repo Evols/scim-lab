@@ -26,6 +26,7 @@ services:
 
       APP_ORIGIN: ${APP_ORIGIN:-https://scimlab.dev}
       APP_SECRET: ${SERVICE_HEX_64_APP_SECRET}
+      WORKSPACE_CREATIONS_PER_MINUTE: ${WORKSPACE_CREATIONS_PER_MINUTE:-2}
 
       OIDC_ISSUER_URL: ${OIDC_ISSUER_URL:-https://auth.scimlab.dev/oidc}
       OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-z3kp8emdt0f9pvugrds1i}
@@ -38,13 +39,30 @@ services:
           "CMD",
           "node",
           "-e",
-          "const s=require('node:net').connect(4321,'127.0.0.1',()=>{s.end();process.exit(0)});s.on('error',()=>process.exit(1))"
+          "const s=require('node:net').connect(4321,'127.0.0.1',()=>{s.end();process.exit(0)});s.on('error',()=>process.exit(1))",
         ]
       interval: 10s
       timeout: 5s
       retries: 12
       start_period: 15s
 
+  # ============================================================
+  # Bounded expiry cleanup runs independently of console traffic.
+  maintenance:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    restart: unless-stopped
+    exclude_from_hc: true
+    init: true
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: >-
+        postgresql://scimlab:${SERVICE_PASSWORD_64_SCIM_DB}@database:5432/scim_lab
+    command: ["node", "scripts/maintenance.mjs", "--apply", "--watch"]
 
   # ============================================================
   # SCIM Lab database migration
@@ -66,7 +84,6 @@ services:
       DATABASE_URL: >-
         postgresql://scimlab:${SERVICE_PASSWORD_64_SCIM_DB}@database:5432/scim_lab
 
-
   # ============================================================
   # SCIM Lab PostgreSQL
   # ============================================================
@@ -84,16 +101,11 @@ services:
       - scim_pgdata:/var/lib/postgresql/data
 
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "pg_isready -h 127.0.0.1 -U scimlab -d scim_lab"
-        ]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U scimlab -d scim_lab"]
       interval: 5s
       timeout: 5s
       retries: 20
       start_period: 10s
-
 
   # ============================================================
   # Logto
@@ -134,13 +146,12 @@ services:
           "CMD",
           "node",
           "-e",
-          "const s=require('node:net').connect(3001,'127.0.0.1',()=>{s.end();process.exit(0)});s.on('error',()=>process.exit(1))"
+          "const s=require('node:net').connect(3001,'127.0.0.1',()=>{s.end();process.exit(0)});s.on('error',()=>process.exit(1))",
         ]
       interval: 10s
       timeout: 5s
       retries: 18
       start_period: 20s
-
 
   # ============================================================
   # Initial Logto database seed
@@ -172,7 +183,6 @@ services:
       - >
         npm run cli db seed -- --swe
 
-
   # ============================================================
   # Logto database alterations
   #
@@ -203,7 +213,6 @@ services:
       - >
         npm run alteration deploy latest
 
-
   # ============================================================
   # Logto PostgreSQL
   # ============================================================
@@ -221,16 +230,11 @@ services:
       - logto_pgdata:/var/lib/postgresql/data
 
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "pg_isready -h 127.0.0.1 -U logto -d logto"
-        ]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U logto -d logto"]
       interval: 5s
       timeout: 5s
       retries: 20
       start_period: 10s
-
 
 # ==============================================================
 # Persistent storage

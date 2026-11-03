@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { eq } from "drizzle-orm";
 import { console_sessions, console_users } from "../../db/schema";
 import { hash_secret } from "../crypto";
 import { with_rollback_transaction } from "../database.testing";
@@ -6,6 +7,27 @@ import { get_server_for_user } from "../management/server";
 import { create_anonymous_context, delete_session, find_console_session, replace_session } from "./session";
 
 describe("console sessions", () => {
+  it(
+    "keeps session timestamps stable on repeated visits and renews older activity",
+    with_rollback_transaction(async (transaction) => {
+      const context = await create_anonymous_context(transaction);
+      const read = async () =>
+        (await transaction.select().from(console_sessions).where(eq(console_sessions.user_id, context.user.id)))[0]!;
+      const first = await read();
+      await find_console_session(context.session_token!, transaction);
+      expect(await read()).toEqual(first);
+      const old_seen = new Date(Date.now() - 60 * 60_000);
+      await transaction
+        .update(console_sessions)
+        .set({ last_seen_at: old_seen })
+        .where(eq(console_sessions.user_id, context.user.id));
+      await find_console_session(context.session_token!, transaction);
+      const renewed = await read();
+      expect(renewed.last_seen_at.getTime()).toBeGreaterThan(old_seen.getTime());
+      await find_console_session(context.session_token!, transaction);
+      expect(await read()).toEqual(renewed);
+    }),
+  );
   it(
     "creates an anonymous user, session, and default server",
     with_rollback_transaction(async (transaction) => {

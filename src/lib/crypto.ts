@@ -69,8 +69,20 @@ export function encrypt_secret(value: string): string {
 }
 
 export function decrypt_secret(value: string): string {
-  const [version, initialization_vector, authentication_tag, encrypted] = value.split(".");
-  if (version !== "v1" || !initialization_vector || !authentication_tag || encrypted === undefined) {
+  const parts = value.split(".");
+  const [version, initialization_vector, authentication_tag, encrypted] = parts;
+  if (
+    parts.length !== 4 ||
+    version !== "v1" ||
+    !initialization_vector ||
+    !authentication_tag ||
+    encrypted === undefined ||
+    Buffer.from(initialization_vector, "base64url").length !== 12 ||
+    Buffer.from(authentication_tag, "base64url").length !== 16 ||
+    [initialization_vector, authentication_tag, encrypted].some(
+      (part) => Buffer.from(part, "base64url").toString("base64url") !== part,
+    )
+  ) {
     throw new Error("The stored credential has an unsupported encryption format.");
   }
   const decipher = createDecipheriv(

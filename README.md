@@ -10,6 +10,8 @@ SCIM Lab is a [SCIM 2.0](https://www.rfc-editor.org/rfc/rfc7644) sandbox for dev
 
 The first visit works anonymously and creates a disposable SCIM server automatically. OpenID Connect can be added for persistent accounts, multiple servers, credential rotation, and sharing.
 
+Anonymous setup uses an automatic browser POST with a cookie challenge; a plain page fetch allocates no database rows. The endpoint and credential initially live in an encrypted, HTTP-only cookie. The workspace is persisted on its first authenticated SCIM request (including discovery), a console mutation, sign-in, or a console visit after the first 15 minutes. The latter preserves sliding inactivity windows without changing a previously copied credential. New anonymous visitors do not create `console_sessions` rows. Existing database sessions and credentials remain supported.
+
 ## Why SCIM Lab?
 
 - It's free
@@ -76,6 +78,7 @@ Development defaults to `postgresql://postgres:postgres@localhost:5432/scim_lab`
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/scim_lab
 APP_ORIGIN=http://localhost:4321
 APP_SECRET=replace-with-a-stable-random-secret
+WORKSPACE_CREATIONS_PER_MINUTE=2
 
 # Optional: all three values enable OpenID Connect.
 OIDC_ISSUER_URL=https://identity.example.com/oidc
@@ -85,6 +88,36 @@ OIDC_SCOPES=openid profile email
 ```
 
 Register `${APP_ORIGIN}/auth/callback` as an allowed OIDC redirect URI. `OIDC_SCOPES` must include `openid`.
+
+`WORKSPACE_CREATIONS_PER_MINUTE` defaults to **2 per client IP in a rolling 60-second window**, shared across all application processes using this database. It applies to first-time anonymous workspace persistence; requests to existing servers do not consume slots. Separate IPs have independent quotas. The activation request's `Astro.clientAddress` supplies the IP, and only a keyed hash of its normalized value is stored. IPv4-mapped IPv6 addresses share the corresponding IPv4 quota. When exceeded, activation returns HTTP 429 with `Retry-After: 60`.
+
+In production, keep the application behind the trusted reverse proxy and configure that proxy to replace untrusted forwarded headers. Astro uses the forwarded client address for the configured `security.allowedDomains`; direct deployments use the socket address. Keep `APP_SECRET` stable: it protects credentials, provisional browser state, and IP hashes. Browsers without JavaScript can use the initial page's create button; cookies are required.
+
+## Database retention and backlog cleanup
+
+Apply migrations before deploying the new application and worker (`pnpm db:migrate`). Migration `0004` adds a small activation/revocation table; the subsequent per-IP quota migration adds an IP-hash column and a composite index to that table. Neither rebuilds indexes on existing large tables. These markers prevent an old provisional credential from recreating a deleted server, and prevent a logged-out or upgraded anonymous cookie from restoring console access.
+
+The Compose stack includes a `maintenance` service. It performs bounded cleanup independently of page traffic, retaining the existing server recovery windows: anonymous servers normally expire after 7 + 30 days of console inactivity, and registered-owner servers after 30 + 90 days. Explicit deactivation timestamps are respected. Anonymous users are removed only after 37 days without console activity, with no owned servers, memberships, valid sessions, or other live temporary records. Registered users are retained. Session/server activity timestamps are updated at most every 15 minutes, introducing up to 15 minutes of inactivity-window rounding.
+
+For other deployments, schedule the command or run its worker mode. Set `DATABASE_URL` explicitly in the command environment; the standalone script does not load `.env` automatically.
+
+```sh
+# Read-only preview; shows eligibility within one bounded batch, not total rows.
+pnpm db:maintenance
+
+# Apply a bounded cleanup pass.
+pnpm db:maintenance --apply
+
+# Continuously clean in small batches, pausing 60 seconds between cycles.
+pnpm db:maintenance --apply --watch
+
+# Larger one-off backlog pass; tune to database load and available WAL space.
+pnpm db:maintenance --apply --batch-size=1000 --max-batches=100000
+```
+
+The defaults are 100 rows per batch and at most 10 batches per table per cycle. `--interval-seconds=60` controls the worker pause. Parent tables are scanned using their existing UUID primary keys; cursors carry across worker cycles, including batches with no eligible rows. A worker restart starts a new scan. `counts` reports deleted parent rows (or eligible sampled rows in preview), while `scanned` reports examined server/user rows. Foreign-key cascades can remove additional child rows. Each batch commits separately, with a 30-second statement timeout and a 2-second lock timeout. Worker errors are logged and retried on the next cycle.
+
+Deletion makes storage reusable; it does not guarantee smaller database files. After stopping excess allocations and removing the backlog, plan physical compaction separately. `VACUUM FULL` rebuilds a table and its indexes, requires an exclusive lock and additional disk space, and should be scheduled in a maintenance window. No compaction runs automatically.
 
 ## Try the SCIM endpoint
 

@@ -1,17 +1,17 @@
-import { lt, or, sql } from "drizzle-orm";
-import { console_flashes, console_sessions, oidc_transactions, share_invites } from "../../db/schema.ts";
+import { sql } from "drizzle-orm";
+import { maintenance_queries } from "../../../scripts/maintenance-queries.mjs";
 import type { Database } from "../database.ts";
 
-export async function purge_expired_records(database: Database): Promise<void> {
-  await database.delete(console_sessions).where(lt(console_sessions.expires_at, new Date()));
-  await database.delete(console_flashes).where(lt(console_flashes.expires_at, new Date()));
-  await database.delete(oidc_transactions).where(lt(oidc_transactions.expires_at, new Date()));
-  await database
-    .delete(share_invites)
-    .where(
-      or(
-        lt(share_invites.expires_at, new Date(Date.now() - 30 * 86_400_000)),
-        sql`${share_invites.revoked_at} is not null and ${share_invites.revoked_at} < now() - interval '30 days'`,
-      ),
+// Requests never run global maintenance. Tests exercise the worker's exact SQL.
+export async function purge_expired_records(database: Database, batch_size = 100): Promise<Record<string, number>> {
+  if (!Number.isSafeInteger(batch_size) || batch_size < 1 || batch_size > 10000)
+    throw new Error("Invalid maintenance batch size.");
+  const counts: Record<string, number> = {};
+  for (const query of maintenance_queries) {
+    const rows = await database.execute(
+      sql.raw(query.remove.replaceAll("$1", String(batch_size)).replaceAll("$2", "NULL")),
     );
+    counts[query.name] = Number(rows[0]?.count ?? 0);
+  }
+  return counts;
 }

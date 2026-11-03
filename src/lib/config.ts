@@ -20,6 +20,12 @@ function required_value(name: string, development_fallback?: string): string {
 }
 
 export const APP_CONFIG = {
+  workspace_creations_per_minute: (() => {
+    const value = Number(process.env.WORKSPACE_CREATIONS_PER_MINUTE ?? 2);
+    if (!Number.isSafeInteger(value) || value < 1)
+      throw new Error("WORKSPACE_CREATIONS_PER_MINUTE must be a positive integer.");
+    return value;
+  })(),
   database_url: required_value("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/scim_lab"),
   app_origin: required_value("APP_ORIGIN", "http://localhost:4321").replace(/\/$/, ""),
   app_secret: required_value("APP_SECRET", "scim-lab-development-secret-change-before-production"),

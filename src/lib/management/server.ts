@@ -1,4 +1,5 @@
-import { and, count, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, count, desc, eq, inArray, isNotNull, lt, or, sql } from "drizzle-orm";
+import { TOUCH_INTERVAL_MS } from "../session/anonymous.ts";
 import type { ConsoleUserRecord, ScimServerRecord } from "../../db/schema.ts";
 import { console_users, scim_servers, server_members } from "../../db/schema.ts";
 import { encrypt_secret, generated_bearer_token, hash_secret } from "../crypto.ts";
@@ -67,7 +68,15 @@ export async function touch_server_console(server_id: string, database: Database
       deactivated_at: null,
       updated_at: new Date(),
     })
-    .where(eq(scim_servers.id, server_id));
+    .where(
+      and(
+        eq(scim_servers.id, server_id),
+        or(
+          lt(scim_servers.last_console_access_at, new Date(Date.now() - TOUCH_INTERVAL_MS)),
+          isNotNull(scim_servers.deactivated_at),
+        ),
+      ),
+    );
 }
 
 export async function mark_server_deactivated(

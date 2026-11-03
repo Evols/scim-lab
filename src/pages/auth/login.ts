@@ -1,5 +1,7 @@
 import type { APIRoute } from "astro";
-import { get_console_context } from "../../lib/session/context";
+import { find_console_context, persist_console_context } from "../../lib/session/context";
+import { local_return_path } from "../../lib/session/bootstrap";
+import { ProvisioningLimitError } from "../../lib/session/anonymous";
 import { save_oidc_transaction } from "../../lib/session/authentication";
 import { get_oidc_configuration, oidc } from "../../lib/session/oidc";
 import { APP_CONFIG, oidc_is_configured } from "../../lib/config";
@@ -7,14 +9,26 @@ import { db } from "../../lib/database";
 
 export const prerender = false;
 
-export const GET: APIRoute = async ({ cookies, redirect, url }) => {
+export const GET: APIRoute = async ({ cookies, redirect, url, clientAddress }) => {
   if (!oidc_is_configured()) {
     return new Response("Sign-in is not configured for this deployment.", { status: 503 });
   }
 
-  const context = await get_console_context(cookies, db);
+  let context = await find_console_context(cookies, db);
+  if (!context)
+    return redirect(
+      `/?signin=1&return_to=${encodeURIComponent(local_return_path(url.searchParams.get("return_to")))}`,
+      303,
+    );
   if (!context.user.is_anonymous) {
     return redirect("/", 303);
+  }
+  try {
+    context = await persist_console_context(context, db, clientAddress);
+  } catch (error) {
+    if (error instanceof ProvisioningLimitError)
+      return new Response(error.message, { status: 429, headers: { "retry-after": "60" } });
+    throw error;
   }
   const return_to_value = url.searchParams.get("return_to") ?? "/";
   const return_to = return_to_value.startsWith("/") && !return_to_value.startsWith("//") ? return_to_value : "/";

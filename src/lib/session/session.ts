@@ -1,14 +1,16 @@
-import { and, eq, gt } from "drizzle-orm";
+import { and, eq, gt, lt } from "drizzle-orm";
 import type { ConsoleUserRecord, ScimServerRecord } from "../../db/schema.ts";
 import { console_sessions, console_users, scim_servers, server_members } from "../../db/schema.ts";
 import { encrypt_secret, generated_bearer_token, hash_secret, random_secret } from "../crypto.ts";
 import type { Database } from "../database.ts";
 import { generated_server_name } from "../management/server-name.ts";
+import { TOUCH_INTERVAL_MS, type AnonymousWorkspace } from "./anonymous.ts";
 
 export interface ConsoleContext {
   user: ConsoleUserRecord;
   session_token?: string;
   fresh_server?: ScimServerRecord;
+  provisional?: AnonymousWorkspace;
 }
 
 export async function find_console_session(raw_token: string, database: Database): Promise<ConsoleContext | null> {
@@ -22,13 +24,20 @@ export async function find_console_session(raw_token: string, database: Database
   if (!rows[0]) {
     return null;
   }
-  await database
-    .update(console_sessions)
-    .set({
-      last_seen_at: new Date(),
-      expires_at: new Date(Date.now() + (rows[0].user.is_anonymous ? 37 : 30) * 86_400_000),
-    })
-    .where(eq(console_sessions.token_hash, token_hash));
+  if (rows[0].session.last_seen_at.getTime() < Date.now() - TOUCH_INTERVAL_MS) {
+    await database
+      .update(console_sessions)
+      .set({
+        last_seen_at: new Date(),
+        expires_at: new Date(Date.now() + (rows[0].user.is_anonymous ? 37 : 30) * 86_400_000),
+      })
+      .where(
+        and(
+          eq(console_sessions.token_hash, token_hash),
+          lt(console_sessions.last_seen_at, new Date(Date.now() - TOUCH_INTERVAL_MS)),
+        ),
+      );
+  }
   return { user: rows[0].user };
 }
 
