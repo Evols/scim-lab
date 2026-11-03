@@ -2,7 +2,7 @@
   "uid": "scim-lab",
   "title": "SCIM Lab",
   "schemaVersion": 41,
-  "version": 2,
+  "version": 3,
   "editable": false,
   "tags": ["scim-lab"],
   "timezone": "utc",
@@ -11,8 +11,57 @@
     "from": "now-30d",
     "to": "now"
   },
-  "description": "Live database aggregates. Accounts are console sign-ins; provisioned SCIM users cannot sign in. Daily signups reflect retained accounts; deleted rows are not historical snapshots.",
+  "description": "Cached database aggregates rebuilt in the background every 15 minutes by default. Check Metrics last refreshed for snapshot age. First refresh can take several minutes on a large database. Counts reflect retained accounts, not historical snapshots.",
   "panels": [
+    {
+      "id": 8,
+      "title": "Metrics last refreshed",
+      "description": "Last successful background snapshot. Initial refresh pending means the first scan has not completed. Refresh failures preserve the previous snapshot and timestamp. The worker pauses 15 minutes between refreshes by default.",
+      "type": "stat",
+      "datasource": {
+        "type": "postgres",
+        "uid": "scim-lab-metrics"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 3
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "scim-lab-metrics"
+          },
+          "rawQuery": true,
+          "rawSql": "SELECT extract(epoch FROM refreshed_at) * 1000 AS refreshed_at FROM metrics.refresh_status",
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "dateTimeAsIso",
+          "noValue": "Initial refresh pending",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "green"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
     {
       "id": 1,
       "title": "Registered accounts",
@@ -24,7 +73,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 0,
+        "y": 3,
         "w": 5,
         "h": 5
       },
@@ -73,7 +122,7 @@
       },
       "gridPos": {
         "x": 5,
-        "y": 0,
+        "y": 3,
         "w": 5,
         "h": 5
       },
@@ -122,7 +171,7 @@
       },
       "gridPos": {
         "x": 10,
-        "y": 0,
+        "y": 3,
         "w": 5,
         "h": 5
       },
@@ -171,7 +220,7 @@
       },
       "gridPos": {
         "x": 15,
-        "y": 0,
+        "y": 3,
         "w": 4,
         "h": 5
       },
@@ -220,7 +269,7 @@
       },
       "gridPos": {
         "x": 19,
-        "y": 0,
+        "y": 3,
         "w": 4,
         "h": 5
       },
@@ -269,7 +318,7 @@
       "description": "Uses account upgrade time, with creation time as a fallback. Counts retained registered accounts; removed accounts disappear. Zero-filled UTC days in the selected interval.",
       "gridPos": {
         "x": 0,
-        "y": 5,
+        "y": 8,
         "w": 24,
         "h": 9
       },
@@ -281,7 +330,7 @@
             "uid": "scim-lab-metrics"
           },
           "rawQuery": true,
-          "rawSql": "SELECT days.time, coalesce(signups.registrations, 0) AS registrations\nFROM generate_series(date_trunc('day', $__timeFrom()::timestamptz AT TIME ZONE 'UTC') AT TIME ZONE 'UTC', date_trunc('day', $__timeTo()::timestamptz AT TIME ZONE 'UTC') AT TIME ZONE 'UTC', interval '1 day') AS days(time)\nLEFT JOIN metrics.registrations_daily AS signups ON signups.time = days.time\nORDER BY days.time",
+          "rawSql": "SELECT days.time, coalesce(signups.registrations, 0) AS registrations\nFROM generate_series(date_trunc('day', $__timeFrom()::timestamptz AT TIME ZONE 'UTC') AT TIME ZONE 'UTC', date_trunc('day', $__timeTo()::timestamptz AT TIME ZONE 'UTC') AT TIME ZONE 'UTC', interval '1 day') AS days(time)\nLEFT JOIN metrics.registrations_daily AS signups ON signups.time = days.time\nWHERE (SELECT refreshed_at IS NOT NULL FROM metrics.refresh_status)\nORDER BY days.time",
           "format": "time_series"
         }
       ],
@@ -319,7 +368,7 @@
       "description": "Retained anonymous accounts grouped by their latest known console activity: creation, account activity, or a refreshed legacy session. Each account appears once, on its most recent UTC day. First visits are included. Provisional browser workspaces are excluded. Activity has up to 15 minutes of timestamp rounding; expired sessions can remove older activity evidence. Zero-filled days follow the selected interval.",
       "gridPos": {
         "x": 0,
-        "y": 14,
+        "y": 17,
         "w": 24,
         "h": 9
       },
@@ -331,7 +380,7 @@
             "uid": "scim-lab-metrics"
           },
           "rawQuery": true,
-          "rawSql": "SELECT days.time, coalesce(activity.anonymous_accounts, 0) AS anonymous_accounts\nFROM generate_series(date_trunc('day', $__timeFrom()::timestamptz AT TIME ZONE 'UTC') AT TIME ZONE 'UTC', date_trunc('day', $__timeTo()::timestamptz AT TIME ZONE 'UTC') AT TIME ZONE 'UTC', interval '1 day') AS days(time)\nLEFT JOIN metrics.anonymous_last_login_daily AS activity ON activity.time = days.time\nORDER BY days.time",
+          "rawSql": "SELECT days.time, coalesce(activity.anonymous_accounts, 0) AS anonymous_accounts\nFROM generate_series(date_trunc('day', $__timeFrom()::timestamptz AT TIME ZONE 'UTC') AT TIME ZONE 'UTC', date_trunc('day', $__timeTo()::timestamptz AT TIME ZONE 'UTC') AT TIME ZONE 'UTC', interval '1 day') AS days(time)\nLEFT JOIN metrics.anonymous_last_login_daily AS activity ON activity.time = days.time\nWHERE (SELECT refreshed_at IS NOT NULL FROM metrics.refresh_status)\nORDER BY days.time",
           "format": "time_series"
         }
       ],

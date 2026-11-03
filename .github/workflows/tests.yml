@@ -74,3 +74,4 @@ jobs:
           PGHOST=127.0.0.1 PGDATABASE=scim_lab PGUSER=grafana_metrics PGPASSWORD="$GRAFANA_DATABASE_PASSWORD" \
             psql --no-psqlrc --set=ON_ERROR_STOP=1 --command='SELECT * FROM metrics.overview'
           psql "$DATABASE_URL" --no-psqlrc --file=infra/metrics/verify.sql
+          node tests/metrics-cache.verify.mjs
