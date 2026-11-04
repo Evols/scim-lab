@@ -126,7 +126,7 @@ pnpm db:maintenance --apply --watch
 pnpm db:maintenance --apply --batch-size=1000 --max-batches=100000
 ```
 
-The defaults are **500 rows per batch and at most 100 batches per table per cycle** (up to 50,000 examined/deleted rows per table). Batches alternate between tables so sessions or events cannot monopolize a cycle; servers are visited before accounts in each round. A full final batch signals possible remaining work, including scans of retained rows: the worker continues after `--catch-up-seconds=1`. After all scans finish, `--interval-seconds=300` controls idle polling. Server, account, and bootstrap-marker tables are scanned using their existing UUID primary keys; cursors carry across worker cycles, including batches with no eligible rows. This avoids repeatedly scanning retained legacy markers for every deletion batch. A worker restart starts a new scan. `counts` reports deleted parent rows (or eligible sampled rows in preview), `scanned` reports examined server/account/marker rows, and `backlog` indicates that another pass may be needed. Foreign-key cascades can remove additional child rows. Each batch commits separately, with a 30-second statement timeout and a 2-second lock timeout. Shutdown stops between batches. Worker errors are logged and retried after the idle polling interval.
+The defaults are **500 rows per batch and at most 100 batches per table per cycle** (up to 50,000 examined/deleted rows per table). Batches alternate between tables so sessions or events cannot monopolize a cycle; servers are visited before accounts in each round. A full final batch signals possible remaining work, including scans of retained rows: the worker continues after `--catch-up-seconds=1`. After all scans finish, `--interval-seconds=300` controls idle polling. All cleanup tables are scanned using their existing primary keys (UUID, text, or bigint as appropriate); cursors carry across worker cycles, including batches with no eligible rows. This bounds eligibility checks as well as deletions, including when millions of retained sessions or legacy markers remain. A worker restart starts a new scan. `counts` reports deleted parent rows (or eligible sampled rows in preview), `scanned` reports examined rows for each table, and `backlog` indicates that another pass may be needed. Foreign-key cascades can remove additional child rows. Each batch commits separately, with a 30-second statement timeout and a 2-second lock timeout. A canceled query (`57014`, normally the statement timeout) is retried at the same cursor with a halved batch size, down to one row. If a table still fails, its cursor stays in place and other tables continue; completed batches remain committed. Progress logs show batch starts/completions at most every five seconds and report every retry or table error with its table, message, batch size, and cursor. The summary includes per-table `errors`; a one-off run with errors exits unsuccessfully. Worker mode retries errors after the idle polling interval. Database connections identify themselves as `scim-lab-maintenance` in `pg_stat_activity`. Shutdown stops between batches.
 
 Deletion makes storage reusable; it does not guarantee smaller database files. After stopping excess allocations and removing the backlog, plan physical compaction separately. `VACUUM FULL` rebuilds a table and its indexes, requires an exclusive lock and additional disk space, and should be scheduled in a maintenance window. No compaction runs automatically.
 
@@ -238,6 +238,25 @@ For a fork, override the example `scimlab.dev` defaults in Coolify:
 Assign the public application domain to port `4321`, the Logto user endpoint to `3001`, and the Logto admin endpoint to `3002`. Configure `${APP_ORIGIN}/auth/callback` as the Logto redirect URI and `APP_ORIGIN` as the post-sign-out redirect URI.
 
 Coolify recognizes the `SERVICE_PASSWORD_*`, `SERVICE_HEX_*`, and `SERVICE_REALBASE64_*` variables in `compose.yaml` and generates the database passwords, application secret, and Logto vault key. Back up both PostgreSQL volumes and your deployment secrets.
+
+### PostgreSQL shared-memory errors
+
+If `VACUUM` fails with `could not resize shared memory segment "/PostgreSQL...": No space left on device`, check the database container's `/dev/shm`, separately from the host's root disk:
+
+```sh
+sudo docker exec <database-container> df -h /dev/shm
+sudo docker inspect <database-container> --format '{{.HostConfig.ShmSize}}'
+```
+
+Docker defaults to a 64 MiB shared-memory mount. The SCIM Lab `database` service sets `shm_size: "256mb"` to give parallel maintenance more room. Redeploy the updated Compose stack in Coolify so the database container is recreated with this setting; restarting the existing container does not apply it. This briefly interrupts database connections and preserves the existing named data volume. Verify `/dev/shm` on the new container after deployment. The mount limit does not reserve all 256 MiB upfront; used pages still consume host memory.
+
+To run maintenance before redeployment, use the existing database `psql` session:
+
+```sql
+VACUUM (PARALLEL 0, VERBOSE, ANALYZE);
+```
+
+This disables parallel index vacuuming for that command. Plain `VACUUM` makes dead-row space reusable within PostgreSQL and usually does not shrink files on the host disk. Physical disk reclamation requires a separate compaction plan as described under data retention above.
 
 ### Private metrics dashboard
 

@@ -1,4 +1,4 @@
-// Fixed identifiers/predicates. Parameters are a batch size and a UUID cursor.
+// Fixed identifiers/predicates. Parameters are a batch size and a primary-key cursor.
 export const maintenance_queries = [
   {
     name: "console_sessions",
@@ -41,40 +41,41 @@ export const maintenance_queries = [
     predicate: "expires_at < now() OR COALESCE(revoked_at, created_at) < now() - interval '14 days'",
   },
 ].map(({ name, key, predicate }) => {
-  // Walk large parent tables by their existing primary keys. Each batch checks
+  // Walk every table by its existing primary key. Each batch checks
   // at most $1 rows, even when almost all remaining records must be retained.
   // The worker carries the cursor across cycles; no extra production index or
   // durable queue is needed to get through the historical backlog.
-  const scan = name === "scim_servers" || name === "console_users" || name === "anonymous_bootstraps";
+  const scan = true;
+  const key_type =
+    name === "scim_events"
+      ? "bigint"
+      : ["scim_servers", "console_users", "anonymous_bootstraps"].includes(name)
+        ? "uuid"
+        : "text";
+  const minimum =
+    key_type === "uuid"
+      ? "'00000000-0000-0000-0000-000000000000'"
+      : key_type === "bigint"
+        ? "'-9223372036854775808'"
+        : "''";
   const scanned = `scanned AS MATERIALIZED (
     SELECT ${key} FROM public.${name}
-    WHERE ${key} >= COALESCE($2::uuid, '00000000-0000-0000-0000-000000000000'::uuid)
-      AND ($2::uuid IS NULL OR ${key} > $2::uuid)
+    WHERE ${key} >= COALESCE($2::${key_type}, ${minimum}::${key_type})
+      AND ($2::${key_type} IS NULL OR ${key} > $2::${key_type})
     ORDER BY ${key} LIMIT $1
   )`;
   const statistics = `(SELECT count(*)::integer FROM scanned) AS scanned,
     (SELECT ${key}::text FROM scanned ORDER BY ${key} DESC LIMIT 1) AS cursor`;
-  if (scan)
-    return {
-      name,
-      scan,
-      preview: `WITH ${scanned} SELECT count(*)::integer AS count, ${statistics}
+  return {
+    name,
+    scan,
+    preview: `WITH ${scanned} SELECT count(*)::integer AS count, ${statistics}
       FROM public.${name} WHERE ${key} IN (SELECT ${key} FROM scanned) AND (${predicate})`,
-      remove: `WITH ${scanned}, candidates AS (
+    remove: `WITH ${scanned}, candidates AS (
       SELECT ${key} FROM public.${name}
       WHERE ${key} IN (SELECT ${key} FROM scanned) AND (${predicate}) FOR UPDATE SKIP LOCKED
     ), removed AS (
       DELETE FROM public.${name} WHERE ${key} IN (SELECT ${key} FROM candidates) RETURNING 1
     ) SELECT count(*)::integer AS count, ${statistics} FROM removed`,
-    };
-  return {
-    name,
-    scan,
-    preview: `SELECT count(*)::integer AS count FROM (SELECT ${key} FROM public.${name} WHERE ${predicate} LIMIT $1) candidates`,
-    remove: `WITH candidates AS (
-    SELECT ${key} FROM public.${name} WHERE ${predicate} LIMIT $1 FOR UPDATE SKIP LOCKED
-  ), removed AS (
-    DELETE FROM public.${name} WHERE ${key} IN (SELECT ${key} FROM candidates) RETURNING 1
-  ) SELECT count(*)::integer AS count FROM removed`,
   };
 });

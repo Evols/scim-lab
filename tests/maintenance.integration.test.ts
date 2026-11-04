@@ -41,6 +41,25 @@ describe("standalone scheduled cleanup", () => {
           expires_at: new Date(Date.now() + 37 * 86_400_000),
         }));
         await transaction`INSERT INTO anonymous_bootstraps ${transaction(markers)}`;
+        await transaction`INSERT INTO console_sessions ${transaction(
+          ids.map((id, index) => ({
+            token_hash: id,
+            user_id: id,
+            created_at: old,
+            last_seen_at: index < 2 ? now : old,
+            expires_at: new Date(Date.now() + 30 * 86_400_000),
+          })),
+        )}`;
+        await transaction`INSERT INTO scim_events ${transaction(
+          ids.map((id) => ({
+            server_id: id,
+            method: "GET",
+            path: "/Users",
+            status: 200,
+            duration_ms: 0,
+            created_at: new Date(Date.now() - 31 * 86_400_000),
+          })),
+        )}`;
         const result = await run_maintenance(
           {
             begin: (_mode: string, work: (sql: postgres.TransactionSql) => Promise<unknown>) =>
@@ -51,16 +70,23 @@ describe("standalone scheduled cleanup", () => {
         expect(result.counts.scim_servers).toBeGreaterThanOrEqual(1203);
         expect(result.counts.console_users).toBeGreaterThanOrEqual(1203);
         expect(result.counts.anonymous_bootstraps).toBeGreaterThanOrEqual(1203);
+        expect(result.counts.console_sessions).toBeGreaterThanOrEqual(1203);
+        expect(result.counts.scim_events).toBeGreaterThanOrEqual(1205);
+        expect(result.errors).toEqual({});
         for (const [table, column] of [
           ["scim_servers", "id"],
           ["console_users", "id"],
           ["anonymous_bootstraps", "server_id"],
           ["server_members", "server_id"],
+          ["console_sessions", "user_id"],
         ] as const) {
           const [remaining] =
             await transaction`SELECT count(*)::integer AS count FROM ${transaction(table)} WHERE ${transaction(column)} IN ${transaction(ids)}`;
           expect(remaining.count).toBe(2);
         }
+        const [events] =
+          await transaction`SELECT count(*)::integer AS count FROM scim_events WHERE server_id IN ${transaction(ids)}`;
+        expect(events.count).toBe(0);
         throw rollback;
       });
     } catch (error) {

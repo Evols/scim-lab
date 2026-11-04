@@ -30,14 +30,18 @@ export function parse_options(args) {
 }
 
 export function maintenance_delay_seconds(result, options) {
+  if (Object.keys(result.errors ?? {}).length) return options.interval_seconds;
   return result.backlog ? options.catch_up_seconds : options.interval_seconds;
 }
 
-export async function run_maintenance(client, options, cursors = {}, signal) {
+export async function run_maintenance(client, options, cursors = {}, signal, report = (_event) => {}) {
   /** @type {Record<string, number>} */
   const counts = {};
   /** @type {Record<string, number>} */
   const scanned = {};
+  /** @type {Record<string, {code: string, message?: string, batch_size: number, cursor: string | null}>} */
+  const errors = {};
+  const batch_sizes = {};
   const pending = new Set(maintenance_queries);
   for (const query of maintenance_queries) counts[query.name] = 0;
   // Alternate tables so a session/event backlog cannot monopolize an entire
@@ -45,31 +49,81 @@ export async function run_maintenance(client, options, cursors = {}, signal) {
   rounds: for (let batch = 0; batch < (options.apply ? options.max_batches : 1); batch++) {
     for (const query of pending) {
       if (signal?.aborted) break rounds;
-      const result = await client.begin(options.apply ? "" : "read only", async (transaction) => {
-        await transaction`SET LOCAL statement_timeout = '30s'`;
-        await transaction`SET LOCAL lock_timeout = '2s'`;
-        const parameters = query.scan ? [options.batch_size, cursors[query.name] ?? null] : [options.batch_size];
-        const [result] = await transaction.unsafe(options.apply ? query.remove : query.preview, parameters);
-        return result;
-      });
+      let result;
+      let batch_size = batch_sizes[query.name] ?? options.batch_size;
+      while (true) {
+        if (signal?.aborted) break rounds;
+        report({ event: "batch_started", table: query.name, batch_size, cursor: cursors[query.name] ?? null });
+        try {
+          result = await client.begin(options.apply ? "" : "read only", async (transaction) => {
+            await transaction`SET LOCAL statement_timeout = '30s'`;
+            await transaction`SET LOCAL lock_timeout = '2s'`;
+            const parameters = [batch_size, cursors[query.name] ?? null];
+            const [result] = await transaction.unsafe(options.apply ? query.remove : query.preview, parameters);
+            return result;
+          });
+          break;
+        } catch (error) {
+          if (error.code === "57014" && batch_size > 1 && !signal?.aborted) {
+            batch_size = Math.max(1, Math.floor(batch_size / 2));
+            batch_sizes[query.name] = batch_size;
+            report({
+              event: "batch_retry",
+              table: query.name,
+              code: error.code,
+              message: error.message,
+              batch_size,
+              cursor: cursors[query.name] ?? null,
+            });
+            continue;
+          }
+          errors[query.name] = {
+            code: error.code ?? error.name ?? "Error",
+            message: error.message,
+            batch_size,
+            cursor: cursors[query.name] ?? null,
+          };
+          report({ event: "table_error", table: query.name, ...errors[query.name] });
+          pending.delete(query);
+          break;
+        }
+      }
+      if (!result) continue;
       const count = Number(result.count);
       counts[query.name] += count;
       const scanned_count = Number(result.scanned ?? count);
       if (query.scan) {
         scanned[query.name] = (scanned[query.name] ?? 0) + scanned_count;
-        cursors[query.name] = scanned_count < options.batch_size ? null : result.cursor;
+        cursors[query.name] = scanned_count < batch_size ? null : result.cursor;
       }
-      if (scanned_count < options.batch_size) pending.delete(query);
+      report({
+        event: "batch_completed",
+        table: query.name,
+        batch_size,
+        count,
+        scanned: scanned_count,
+        total: counts[query.name],
+      });
+      if (scanned_count < batch_size) pending.delete(query);
     }
     if (!pending.size) break;
   }
-  return { mode: options.apply ? "deleted" : "eligible_in_scanned_batch", counts, scanned, backlog: pending.size > 0 };
+  return {
+    mode: options.apply ? "deleted" : "eligible_in_scanned_batch",
+    counts,
+    scanned,
+    errors,
+    backlog: pending.size > 0 || Object.keys(errors).length > 0,
+  };
 }
 
 async function main() {
   const options = parse_options(process.argv.slice(2));
   if (!process.env.DATABASE_URL) throw new Error("Set DATABASE_URL explicitly before running maintenance.");
-  const client = postgres(process.env.DATABASE_URL, { max: 1 });
+  const client = postgres(process.env.DATABASE_URL, {
+    max: 1,
+    connection: { application_name: "scim-lab-maintenance" },
+  });
   const cursors = {};
   const abort = new AbortController();
   const stop = () => abort.abort();
@@ -79,11 +133,20 @@ async function main() {
     do {
       let delay_seconds = options.interval_seconds;
       try {
-        const result = await run_maintenance(client, options, cursors, abort.signal);
+        let last_progress_at = 0;
+        const result = await run_maintenance(client, options, cursors, abort.signal, (event) => {
+          if (!["batch_started", "batch_completed"].includes(event.event) || Date.now() - last_progress_at >= 5000) {
+            console.log(JSON.stringify({ time: new Date().toISOString(), ...event }));
+            last_progress_at = Date.now();
+          }
+        });
         delay_seconds = maintenance_delay_seconds(result, options);
         console.log(JSON.stringify({ time: new Date().toISOString(), ...result }));
+        if (!options.watch && Object.keys(result.errors).length) process.exitCode = 1;
       } catch (error) {
-        console.error(JSON.stringify({ maintenance_error: error.code ?? error.name ?? "Error" }));
+        console.error(
+          JSON.stringify({ maintenance_error: error.code ?? error.name ?? "Error", message: error.message }),
+        );
         if (!options.watch) {
           process.exitCode = 1;
           break;

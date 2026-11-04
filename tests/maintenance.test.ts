@@ -41,14 +41,14 @@ describe("maintenance command", () => {
     const options = parse_options(["--apply", "--batch-size=100", "--max-batches=2"]);
     const result = await run_maintenance(client, options, cursors);
     expect(result.backlog).toBe(true);
-    expect(recorded).toHaveLength(6);
-    expect(recorded[3]![1]).toBe("00000000-0000-4000-8000-000000000001");
+    expect(recorded).toHaveLength(16);
+    expect(recorded[8]![1]).toBe("00000000-0000-4000-8000-000000000001");
     expect(cursors.scim_servers).toBeTruthy();
     expect(cursors.console_users).toBeTruthy();
     expect(cursors.anonymous_bootstraps).toBeTruthy();
     recorded.length = 0;
     await run_maintenance(client, options, cursors);
-    expect(recorded[0]![1]).toBe(cursors.scim_servers);
+    expect(recorded[0]![1]).toBe(cursors.console_sessions);
   });
 
   it("uses short catch-up pauses until every table scan is exhausted", async () => {
@@ -72,7 +72,7 @@ describe("maintenance command", () => {
     const drained = await run_maintenance(client, options, cursors);
     expect(drained.backlog).toBe(false);
     expect(maintenance_delay_seconds(drained, options)).toBe(300);
-    expect(Object.values(cursors)).toEqual([null, null, null]);
+    expect(Object.values(cursors)).toEqual(Array(8).fill(null));
     expect(maintenance_delay_seconds(backlog, parse_options(["--catch-up-seconds=5"]))).toBe(5);
   });
 
@@ -95,5 +95,65 @@ describe("maintenance command", () => {
     expect(transactions).toBe(1);
     expect(result.counts.console_sessions).toBe(500);
     expect(result.counts.scim_servers).toBe(0);
+  });
+
+  it("retries timed-out batches at the same cursor with fewer rows", async () => {
+    const attempts: unknown[][] = [];
+    const events: { event: string; table: string; batch_size: number }[] = [];
+    const cursors = { console_sessions: "previous-token" };
+    const client = {
+      begin: async (_mode: string, work: (transaction: unknown) => unknown) => {
+        const transaction = Object.assign(async () => [], {
+          unsafe: async (query: string, parameters: unknown[]) => {
+            if (!query.includes("FROM public.console_sessions")) return [{ count: 0, scanned: 0, cursor: null }];
+            attempts.push([...parameters]);
+            if (Number(parameters[0]) > 125) throw Object.assign(new Error("statement timeout"), { code: "57014" });
+            return [{ count: 2, scanned: 3, cursor: "next-token" }];
+          },
+        });
+        return work(transaction);
+      },
+    };
+    const result = await run_maintenance(client, parse_options(["--apply"]), cursors, undefined, (event) =>
+      events.push(event),
+    );
+    expect(attempts).toEqual([
+      [500, "previous-token"],
+      [250, "previous-token"],
+      [125, "previous-token"],
+    ]);
+    expect(result.counts.console_sessions).toBe(2);
+    expect(result.errors).toEqual({});
+    expect(events.filter((event) => event.event === "batch_retry").map((event) => event.batch_size)).toEqual([
+      250, 125,
+    ]);
+  });
+
+  it("reports a failing table, retains its cursor, and still cleans other tables", async () => {
+    const cursors = { console_sessions: "previous-token" };
+    const client = {
+      begin: async (_mode: string, work: (transaction: unknown) => unknown) => {
+        const transaction = Object.assign(async () => [], {
+          unsafe: async (query: string) => {
+            if (query.includes("FROM public.console_sessions"))
+              throw Object.assign(new Error("statement timeout"), { code: "57014" });
+            return [{ count: 1, scanned: 1, cursor: "next" }];
+          },
+        });
+        return work(transaction);
+      },
+    };
+    const options = parse_options(["--apply", "--batch-size=1", "--max-batches=1"]);
+    const result = await run_maintenance(client, options, cursors);
+    expect(result.errors.console_sessions).toMatchObject({
+      code: "57014",
+      message: "statement timeout",
+      batch_size: 1,
+      cursor: "previous-token",
+    });
+    expect(cursors.console_sessions).toBe("previous-token");
+    expect(result.counts.scim_servers).toBe(1);
+    expect(result.counts.console_users).toBe(1);
+    expect(maintenance_delay_seconds(result, options)).toBe(300);
   });
 });
