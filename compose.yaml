@@ -92,6 +92,8 @@ services:
     image: postgres:16-alpine
 
     restart: unless-stopped
+    # Parallel VACUUM needs more than Docker's default 64 MiB /dev/shm.
+    shm_size: "256mb"
 
     environment:
       POSTGRES_DB: scim_lab
